@@ -24,10 +24,12 @@ import {
   useLocation,
   useNavigate,
 } from "react-router-dom";
+import AdminView from "./components/AdminView";
 import AuthScreen from "./components/AuthScreen";
 import CalendarView from "./components/CalendarView";
 import EventPage from "./components/EventPage";
 import Header from "./components/header";
+import UserEvents from "./components/UserEvents";
 import { analytics, appId, auth, db } from "./firebase";
 import CreateEventModal from "./modals/CreateEvent";
 import GetUserNameModal from "./modals/GetUserName";
@@ -271,7 +273,9 @@ function AppContent() {
             <Route path="/event/:eventId" element={<EventPage />} />
             <Route path="/day/:date" element={<CalendarView />} />
             <Route path="/week/:weekStart" element={<CalendarView />} />
+            <Route path="/my-events" element={<UserEvents />} />
             <Route path="/login" element={<AuthScreen />} />
+            <Route path="/admin" element={<AdminView />} />
           </Routes>
         </main>
         {/* Only show create event modal if logged in */}

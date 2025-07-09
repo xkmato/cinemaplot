@@ -147,13 +147,6 @@ const EventPage = () => {
   const generateMetaTags = () => {
     if (!event) return null;
 
-    const eventDate = new Date(event.date);
-    const displayDate = eventDate.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-
     return (
       <Helmet>
         <title>{`${event.title} - Cinema Plot`}</title>
