@@ -1,0 +1,111 @@
+/* Custom styles for react-datepicker and react-time-picker */
+
+/* DatePicker Styles */
+.react-datepicker {
+  @apply bg-card border-border shadow-2xl rounded-xl overflow-hidden;
+  border: 1px solid hsl(var(--border));
+}
+
+.react-datepicker__header {
+  @apply bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border/20;
+  border-bottom: 1px solid hsl(var(--border) / 0.2);
+}
+
+.react-datepicker__current-month {
+  @apply text-foreground font-semibold text-lg;
+}
+
+.react-datepicker__day-name {
+  @apply text-muted-foreground font-medium text-sm;
+}
+
+.react-datepicker__day {
+  @apply text-foreground hover:bg-primary/10 rounded-md transition-colors;
+}
+
+.react-datepicker__day--selected {
+  @apply bg-primary text-primary-foreground font-medium;
+}
+
+.react-datepicker__day--today {
+  @apply bg-accent text-accent-foreground font-medium;
+}
+
+.react-datepicker__day--disabled {
+  @apply text-muted-foreground cursor-not-allowed opacity-50;
+}
+
+.react-datepicker__navigation {
+  @apply top-3;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply border-foreground;
+  border-color: hsl(var(--foreground));
+}
+
+/* TimePicker Styles */
+.react-time-picker {
+  @apply w-full;
+}
+
+.react-time-picker__wrapper {
+  @apply border-0 bg-transparent;
+}
+
+.react-time-picker__inputGroup {
+  @apply flex items-center space-x-1;
+}
+
+.react-time-picker__inputGroup__input {
+  @apply bg-transparent text-foreground text-base font-medium;
+  border: none !important;
+  outline: none !important;
+}
+
+.react-time-picker__inputGroup__divider {
+  @apply text-muted-foreground;
+}
+
+.react-time-picker__button {
+  @apply text-muted-foreground hover:text-foreground transition-colors;
+}
+
+.react-time-picker__clock {
+  @apply bg-card border-border shadow-2xl rounded-xl;
+  border: 1px solid hsl(var(--border));
+}
+
+/* Clock Styles */
+.react-clock {
+  @apply bg-card;
+}
+
+.react-clock__face {
+  @apply border-border;
+  border-color: hsl(var(--border));
+}
+
+.react-clock__hour-mark {
+  @apply bg-muted-foreground;
+}
+
+.react-clock__minute-mark {
+  @apply bg-muted-foreground/50;
+}
+
+.react-clock__hand {
+  @apply bg-primary;
+}
+
+.react-clock__hand__body {
+  @apply bg-primary;
+}
+
+.react-clock__mark__body {
+  @apply bg-foreground;
+}
+
+.react-clock__mark__number {
+  @apply text-foreground font-medium;
+}
