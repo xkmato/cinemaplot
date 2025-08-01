@@ -184,7 +184,7 @@ export default function HomePage() {
               {recentEvents.length > 0 ? 'Upcoming Events' : 'Recent Events'}
             </h2>
             <Button variant="outline" asChild>
-              <Link href="/discover">View All Events</Link>
+              <Link href="/events">View All Events</Link>
             </Button>
           </div>
           {recentEvents.length > 0 ? (

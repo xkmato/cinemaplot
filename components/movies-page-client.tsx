@@ -48,7 +48,7 @@ export default function MoviesPageClient() {
                             <Button size="sm" asChild>
                                 <Link href="/movies/create">
                                     <Plus className="w-4 h-4 mr-1" />
-                                    Add Movie
+                                    Share Film
                                 </Link>
                             </Button>
                         </div>
