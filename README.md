@@ -1,6 +1,6 @@
 # Cinema Plot - Film Events Calendar
 
-Cinema Plot is an open-source event management platform specifically designed for the Ugandan film industry. It provides a simple, intuitive way for filmmakers, industry professionals, and enthusiasts to create, share, and discover film-related events across Uganda.
+Cinema Plot is a modern, open-source event management platform specifically designed for the Ugandan film industry. Built with Next.js and powered by Firebase, it provides a simple, intuitive way for filmmakers, industry professionals, and enthusiasts to create, share, and discover film-related events across Uganda.
 
 ## Features
 
@@ -37,25 +37,24 @@ Cinema Plot is an open-source event management platform specifically designed fo
 
 ## Tech Stack
 
-- **Frontend**: React 19.1.0 with React Router for navigation
-- **Styling**: Tailwind CSS for responsive, utility-first styling
+- **Frontend**: Next.js 15 with React 19 and TypeScript for modern, type-safe development
+- **Styling**: Tailwind CSS with shadcn/ui components for consistent, modern design
 - **Backend**: Firebase ecosystem
   - Firestore for real-time database
-  - Firebase Auth for user authentication
+  - Firebase Auth for user authentication (Google OAuth + Magic Link)
   - Firebase Storage for image uploads
   - Firebase Analytics for usage tracking
-- **Notifications**: Mailgun for email delivery
-- **Cloud Functions**: Firebase Functions for scheduled notifications
-- **Hosting**: Firebase Hosting with automatic deployments
+- **State Management**: React Context API with custom hooks
+- **Development**: ESLint for code quality, TypeScript for type safety
+- **Hosting**: Vercel-ready with Firebase backend
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (version 16 or higher)
-- npm or yarn package manager
+- Node.js (version 18 or higher)
+- npm, yarn, or pnpm package manager
 - Firebase project with Firestore, Authentication, and Storage enabled
-- Mailgun account for email notifications (optional)
 
 ### Installation
 
@@ -70,29 +69,40 @@ Cinema Plot is an open-source event management platform specifically designed fo
 
    ```bash
    npm install
+   # or
+   yarn install
+   # or
+   pnpm install
    ```
 
 3. **Set up environment variables**
 
-   Create a `.env` file in the root directory:
+   Copy the example environment file and update with your Firebase credentials:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Update `.env.local` with your Firebase configuration:
 
    ```env
-   REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   REACT_APP_FIREBASE_APP_ID=your_app_id
-   REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
    ```
 
 4. **Configure Firebase**
 
    - Create a new Firebase project at [Firebase Console](https://console.firebase.google.com)
-   - Enable Authentication (Google and Email Link providers)
+   - Enable Authentication with Google and Email Link providers
    - Enable Firestore Database
    - Enable Storage
    - Enable Analytics (optional)
+   - Copy your Firebase configuration to `.env.local`
 
 5. **Set up Firestore Security Rules**
 
@@ -102,7 +112,26 @@ Cinema Plot is an open-source event management platform specifically designed fo
    rules_version = '2';
    service cloud.firestore {
      match /databases/{database}/documents {
-       match /{document=**} {
+       match /events/{eventId} {
+         allow read: if true;
+         allow write: if request.auth != null;
+       }
+       match /users/{userId} {
+         allow read, write: if request.auth != null && request.auth.uid == userId;
+       }
+     }
+   }
+   ```
+
+6. **Set up Firebase Storage Rules**
+
+   Update your Storage rules in the Firebase Console:
+
+   ```javascript
+   rules_version = '2';
+   service firebase.storage {
+     match /b/{bucket}/o {
+       match /event-images/{allPaths=**} {
          allow read: if true;
          allow write: if request.auth != null;
        }
@@ -115,17 +144,22 @@ Cinema Plot is an open-source event management platform specifically designed fo
 ### Running the Development Server
 
 ```bash
-npm start
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
 ```
 
-This will start the development server at `http://localhost:3000`. The app will automatically reload when you make changes to the source code.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. The app will automatically reload when you make changes to the source code.
 
 ### Available Scripts
 
-- `npm start` - Start development server
-- `npm test` - Run test suite
+- `npm run dev` - Start development server
 - `npm run build` - Build production bundle
-- `npm run eject` - Eject from Create React App (not recommended)
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint for code quality checks
+- `npm run type-check` - Run TypeScript type checking
 
 ### Development with Firebase Emulators (Optional)
 
@@ -158,85 +192,107 @@ This will start local emulators for Firestore, Authentication, Storage, and Func
 npm run build
 ```
 
-This creates an optimized production build in the `build` folder.
+This creates an optimized production build in the `.next` folder.
 
-### Deploying to Firebase Hosting
+### Deploying to Vercel (Recommended)
 
-1. **Install Firebase CLI** (if not already installed)
+The easiest way to deploy your Next.js app is to use [Vercel](https://vercel.com/new):
+
+1. **Push your code to GitHub**
+2. **Import your repository on Vercel**
+3. **Add environment variables** in Vercel dashboard
+4. **Deploy automatically** - Vercel will build and deploy your app
+
+### Alternative Deployment Options
+
+#### Deploy to Firebase Hosting
+
+1. **Install Firebase CLI**
 
    ```bash
    npm install -g firebase-tools
    ```
 
-2. **Login to Firebase**
+2. **Login and initialize**
 
    ```bash
    firebase login
+   firebase init hosting
    ```
 
-3. **Initialize Firebase in your project** (if not already done)
+3. **Build and deploy**
 
-   ```bash
-   firebase init
-   ```
-
-   Select Hosting and choose your Firebase project.
-
-4. **Build and deploy**
    ```bash
    npm run build
    firebase deploy
    ```
 
-### Setting up Email Notifications (Optional)
+#### Deploy to Netlify
 
-1. **Create a Mailgun account** at [mailgun.com](https://www.mailgun.com)
-
-2. **Set up environment variables** for Cloud Functions:
+1. **Build the project**
 
    ```bash
-   firebase functions:config:set mailgun.key="your-mailgun-api-key" mailgun.domain="your-domain.com"
+   npm run build
    ```
 
-3. **Deploy Cloud Functions**
-   ```bash
-   firebase deploy --only functions
-   ```
+2. **Deploy using Netlify CLI or drag-and-drop** the `.next` folder to Netlify
 
-### Environment-Specific Configurations
+### Environment Variables for Production
 
-For production deployments, ensure you:
+Ensure you set up the following environment variables in your deployment platform:
 
-- Use production Firebase project credentials
-- Enable proper security rules for Firestore and Storage
-- Set up proper CORS policies if needed
-- Configure custom domain in Firebase Hosting (optional)
-- Set up monitoring and alerts for production usage
+- `NEXT_PUBLIC_FIREBASE_API_KEY`
+- `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `NEXT_PUBLIC_FIREBASE_APP_ID`
+- `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID`
 
 ## Project Structure
 
 ```
-src/
-├── components/          # Reusable React components
-│   ├── AuthScreen.js    # Authentication interface
-│   ├── CalendarView.js  # Main calendar interface
-│   ├── EventItem.js     # Individual event display
-│   ├── EventPage.js     # Detailed event view
-│   └── header.js        # Navigation header
-├── modals/              # Modal components
-│   ├── CreateEvent.js   # Event creation form
-│   └── GetUserName.js   # User profile setup
-├── App.js              # Main application component
-├── firebase.js         # Firebase configuration
-├── Helpers.js          # Utility functions
-└── index.js            # Application entry point
+app/                    # Next.js App Router
+├── page.tsx           # Homepage
+├── layout.tsx         # Root layout
+├── globals.css        # Global styles
+├── create/
+│   └── page.tsx       # Event creation page
+├── discover/
+│   └── page.tsx       # Event discovery page
+└── events/
+    └── [id]/
+        └── page.tsx   # Individual event pages
 
-functions/              # Firebase Cloud Functions
-└── main.py            # Email notification scheduler
+components/            # Reusable React components
+├── auth-screen.tsx    # Authentication interface
+├── create-event-modal.tsx  # Event creation form
+├── event-card.tsx     # Event display component
+├── get-user-name-modal.tsx # User profile setup
+└── ui/               # shadcn/ui components
+    ├── button.tsx
+    ├── card.tsx
+    ├── input.tsx
+    └── ...
 
-public/                # Static assets
-├── index.html         # HTML template
-└── manifest files     # PWA configuration
+lib/                  # Utilities and configurations
+├── firebase.ts       # Firebase configuration
+├── auth-context.tsx  # Authentication & state management
+├── types.ts          # TypeScript type definitions
+├── helpers.ts        # Utility functions
+└── utils.ts          # Utility functions
+
+public/               # Static assets
+├── next.svg
+├── vercel.svg
+└── ...
+
+Configuration files:
+├── next.config.ts    # Next.js configuration
+├── tailwind.config.ts # Tailwind CSS configuration
+├── tsconfig.json     # TypeScript configuration
+├── eslint.config.mjs # ESLint configuration
+└── components.json   # shadcn/ui configuration
 ```
 
 ## Contributing
@@ -251,11 +307,12 @@ We welcome contributions to Cinema Plot! Here's how you can help:
 
 ### Development Guidelines
 
-- Follow React best practices and hooks patterns
-- Use Tailwind CSS classes for styling consistency
+- Follow Next.js and React best practices with TypeScript
+- Use shadcn/ui components for consistent UI design
 - Ensure mobile responsiveness for all new features
-- Write clear commit messages
+- Write clear commit messages and maintain type safety
 - Test your changes thoroughly before submitting
+- Use the Context API pattern for state management
 
 ## License
 
