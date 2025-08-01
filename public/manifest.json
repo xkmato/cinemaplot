@@ -1,0 +1,26 @@
+{
+  "name": "CinemaPlot - Create, Share & Discover Amazing Events & Films",
+  "short_name": "CinemaPlot",
+  "description": "Build a community around your events and movies. Connect with audiences, get followers, and make your content discoverable.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/social-preview.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "social", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr"
+}

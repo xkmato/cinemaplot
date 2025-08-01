@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAppContext } from "@/lib/auth-context";
 import { isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
+import { shouldUseUnoptimized } from "@/lib/utils";
 import { Calendar, Play, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -231,6 +232,7 @@ export default function HomePage() {
                       width={300}
                       height={200}
                       className="w-full h-48 object-cover"
+                      unoptimized={movie.imageUrl ? shouldUseUnoptimized(movie.imageUrl) : false}
                     />
                     <Badge className="absolute top-2 left-2">{movie.category || 'Film'}</Badge>
                   </div>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { Event } from "@/lib/types";
+import { shouldUseUnoptimized } from "@/lib/utils";
 import { Calendar, Clock, DollarSign, Film, MapPin, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,6 +31,7 @@ export default function EventCard({ event, onClick, showViewButton = true }: Eve
                     alt={event.title}
                     fill
                     className="object-cover"
+                    unoptimized={event.imageUrl ? shouldUseUnoptimized(event.imageUrl) : false}
                 />
                 {event.isMultiDay && (
                     <Badge className="absolute top-2 left-2" variant="secondary">

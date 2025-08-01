@@ -1,6 +1,6 @@
+import EventsPageClient from '@/components/events-page-client';
 import { generateSEOMetadata } from '@/lib/seo';
 import { Metadata } from 'next';
-import EventsPageClient from '../../components/events-page-client';
 
 export const metadata: Metadata = generateSEOMetadata({
     title: 'Discover Events - Find Amazing Events Near You',
