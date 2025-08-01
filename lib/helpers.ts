@@ -48,3 +48,55 @@ export const getEventDateRange = (event: Event): Date[] => {
 
   return dates;
 };
+
+// Check if an event is upcoming or currently ongoing
+export const isEventUpcomingOrOngoing = (event: Event, today: string = new Date().toISOString().split('T')[0]): boolean => {
+  const eventStartDate = event.date;
+  
+  // For single day events, check if the event date is today or in the future
+  if (!event.isMultiDay) {
+    return eventStartDate >= today;
+  }
+  
+  // For multi-day events, check if today falls within the event's date range
+  if (event.endDate) {
+    return today >= eventStartDate && today <= event.endDate;
+  }
+  
+  // Fallback: if no endDate but has numberOfDays, calculate the end date
+  if (event.numberOfDays && event.numberOfDays > 1) {
+    const startDate = new Date(eventStartDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + event.numberOfDays - 1);
+    const endDateStr = endDate.toISOString().split('T')[0];
+    return today >= eventStartDate && today <= endDateStr;
+  }
+  
+  // Default behavior: treat as single day event
+  return eventStartDate >= today;
+};
+
+// Check if an event is in the past (completely finished)
+export const isEventInPast = (event: Event, today: string = new Date().toISOString().split('T')[0]): boolean => {
+  // For single day events, check if the event date is before today
+  if (!event.isMultiDay) {
+    return event.date < today;
+  }
+  
+  // For multi-day events, check if the end date is before today
+  if (event.endDate) {
+    return event.endDate < today;
+  }
+  
+  // Fallback: if no endDate but has numberOfDays, calculate the end date
+  if (event.numberOfDays && event.numberOfDays > 1) {
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + event.numberOfDays - 1);
+    const endDateStr = endDate.toISOString().split('T')[0];
+    return endDateStr < today;
+  }
+  
+  // Default behavior: treat as single day event
+  return event.date < today;
+};

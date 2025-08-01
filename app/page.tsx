@@ -1,58 +1,70 @@
 'use client';
 
 import AuthScreen from "@/components/auth-screen";
-import CreateEventModal from "@/components/create-event-modal";
 import EventCard from "@/components/event-card";
 import GetUserNameModal from "@/components/get-user-name-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
+import { isEventUpcomingOrOngoing } from "@/lib/helpers";
+import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { Calendar, Play, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function HomePage() {
-  const { user, events, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
-  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const { user, events, movies, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
   const [showAuthModal, setShowAuthModal] = useState(false);
-
-  // Show authentication screen as modal if user tries to create event
-  const handleCreateEvent = () => {
-    if (!user) {
-      setShowAuthModal(true);
-    } else {
-      setShowCreateEventModal(true);
-    }
-  };
 
   // Get recent events for homepage
   const recentEvents = events
-    .filter(event => new Date(event.date) >= new Date())
+    .filter(event => isEventUpcomingOrOngoing(event))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 2);
 
-  const featuredMovies = [
-    {
-      id: 1,
-      title: "The Last Journey",
-      description: "A heartwarming story about finding purpose",
-      category: "Short Film",
-      rating: 4.8,
-      reviews: 156,
-      image: "/placeholder.svg?height=200&width=300",
-    },
-    {
-      id: 2,
-      title: "Digital Dreams",
-      description: "Exploring the intersection of technology and humanity",
-      category: "Web Episode",
-      rating: 4.6,
-      reviews: 89,
-      image: "/placeholder.svg?height=200&width=300",
-    },
-  ];
+  // Calculate real statistics
+  const totalEvents = events.length;
+  const totalMovies = movies.length;
+
+  // Calculate unique community members (creators + followers)
+  const uniqueCreatorIds = new Set([
+    ...events.map(event => event.creatorId),
+    ...movies.map(movie => movie.creatorId)
+  ]);
+
+  const uniqueFollowerIds = new Set(
+    events.flatMap(event => event.followers || [])
+  );
+
+  // Combine creators and followers, removing duplicates
+  const allUniqueMembers = new Set([...uniqueCreatorIds, ...uniqueFollowerIds]);
+  const totalCommunityMembers = allUniqueMembers.size;
+
+  // Get featured movies (recent movies with good ratings, fallback to recent movies)
+  const featuredMovies = (() => {
+    // First try to get movies with good ratings (4.0+)
+    const highRatedMovies = movies
+      .filter(movie => movie.averageRating && movie.averageRating >= 4.0)
+      .sort((a, b) => {
+        if (b.averageRating! !== a.averageRating!) {
+          return b.averageRating! - a.averageRating!;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, 3);
+
+    // If we have enough high-rated movies, return them
+    if (highRatedMovies.length >= 2) {
+      return highRatedMovies;
+    }
+
+    // Otherwise, return the most recent movies
+    return movies
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+  })();
 
   if (isLoading) {
     return (
@@ -111,7 +123,9 @@ export default function HomePage() {
                   <Button variant="ghost" size="sm" onClick={() => setShowAuthModal(true)}>
                     Sign In
                   </Button>
-                  <Button size="sm" onClick={handleCreateEvent}>Get Started</Button>
+                  <Button size="sm" asChild>
+                    <Link href="/create">Get Started</Link>
+                  </Button>
                 </>
               )}
             </div>
@@ -131,11 +145,11 @@ export default function HomePage() {
             content discoverable.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="text-lg px-8" onClick={handleCreateEvent}>
-              Create Your First Event
+            <Button size="lg" className="text-lg px-8" asChild>
+              <Link href="/create">Add Event or Film</Link>
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent" asChild>
-              <Link href="/discover">Explore Content</Link>
+              <Link href="/discover">Explore Events and Films</Link>
             </Button>
           </div>
         </div>
@@ -146,15 +160,15 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-primary mb-2">{events.length}+</div>
+              <div className="text-3xl font-bold text-primary mb-2">{totalEvents}</div>
               <div className="text-muted-foreground">Events Created</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary mb-2">5K+</div>
+              <div className="text-3xl font-bold text-primary mb-2">{totalMovies}</div>
               <div className="text-muted-foreground">Films Shared</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary mb-2">50K+</div>
+              <div className="text-3xl font-bold text-primary mb-2">{totalCommunityMembers || 0}</div>
               <div className="text-muted-foreground">Community Members</div>
             </div>
           </div>
@@ -185,7 +199,9 @@ export default function HomePage() {
               <p className="text-muted-foreground mb-4">
                 Be the first to create an event and start building your community!
               </p>
-              <Button onClick={handleCreateEvent}>Create First Event</Button>
+              <Button asChild>
+                <Link href="/create">Create First Event</Link>
+              </Button>
             </div>
           )}
         </div>
@@ -195,42 +211,59 @@ export default function HomePage() {
       <section className="py-16 bg-muted/50">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">Popular Movies</h2>
+            <h2 className="text-3xl font-bold">
+              {featuredMovies.some(movie => movie.averageRating && movie.averageRating >= 4.0)
+                ? 'Featured Movies'
+                : 'Recent Movies'}
+            </h2>
             <Button variant="outline" asChild>
               <Link href="/movies">View All Movies</Link>
             </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredMovies.map((movie) => (
-              <Card key={movie.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative">
-                  <Image
-                    src={movie.image || "/placeholder.svg"}
-                    alt={movie.title}
-                    width={300}
-                    height={200}
-                    className="w-full h-48 object-cover"
-                  />
-                  <Badge className="absolute top-2 left-2">{movie.category}</Badge>
-                </div>
-                <CardHeader>
-                  <CardTitle className="line-clamp-1">{movie.title}</CardTitle>
-                  <CardDescription className="line-clamp-2">{movie.description}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
-                    <div className="flex items-center">
-                      <Star className="w-4 h-4 mr-1 fill-yellow-400 text-yellow-400" />
-                      {movie.rating}
-                    </div>
-                    <div>{movie.reviews} reviews</div>
+            {featuredMovies.length > 0 ? (
+              featuredMovies.map((movie) => (
+                <Card key={movie.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="relative">
+                    <Image
+                      src={movie.imageUrl || createPlaceholderDataUrl('movie', movie.title, 300, 200)}
+                      alt={movie.title}
+                      width={300}
+                      height={200}
+                      className="w-full h-48 object-cover"
+                    />
+                    <Badge className="absolute top-2 left-2">{movie.category || 'Film'}</Badge>
                   </div>
-                  <Button className="w-full" asChild>
-                    <Link href={`/movies/${movie.id}`}>Watch Now</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardHeader>
+                    <CardTitle className="line-clamp-1">{movie.title}</CardTitle>
+                    <CardDescription className="line-clamp-2">{movie.logLine}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                      <div className="flex items-center">
+                        <Star className="w-4 h-4 mr-1 fill-yellow-400 text-yellow-400" />
+                        {movie.averageRating?.toFixed(1) || 'N/A'}
+                      </div>
+                      <div>{movie.totalRatings || 0} reviews</div>
+                    </div>
+                    <Button className="w-full" asChild>
+                      <Link href={`/movies/${movie.id}`}>Watch Now</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No Featured Movies Yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Be the first to share a movie and start building your audience!
+                </p>
+                <Button asChild>
+                  <Link href="/movies/create">Share Your First Movie</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -242,8 +275,8 @@ export default function HomePage() {
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Join thousands of creators who are using CinemaPlot to promote their events and films to engaged audiences.
           </p>
-          <Button size="lg" className="text-lg px-8" onClick={handleCreateEvent}>
-            Start Creating Today
+          <Button size="lg" className="text-lg px-8" asChild>
+            <Link href="/create">Start Creating Today</Link>
           </Button>
         </div>
       </section>
@@ -263,6 +296,8 @@ export default function HomePage() {
                 The platform for creators to build communities around their events and films.
               </p>
             </div>
+            <div></div>
+            <div></div>
             <div>
               <h3 className="font-semibold mb-4">Platform</h3>
               <ul className="space-y-2 text-muted-foreground">
@@ -288,41 +323,8 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>
-                  <Link href="/help" className="hover:text-foreground">
-                    Help Center
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-foreground">
-                    Contact
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/community" className="hover:text-foreground">
-                    Community
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                <li>
-                  <Link href="/privacy" className="hover:text-foreground">
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/terms" className="hover:text-foreground">
-                    Terms
-                  </Link>
-                </li>
-              </ul>
-            </div>
+
+
           </div>
           <div className="border-t mt-8 pt-8 text-center text-muted-foreground">
             <p>&copy; 2025 CinemaPlot. All rights reserved.</p>
@@ -331,10 +333,6 @@ export default function HomePage() {
       </footer>
 
       {/* Modals */}
-      {showCreateEventModal && (
-        <CreateEventModal onClose={() => setShowCreateEventModal(false)} />
-      )}
-
       {showAuthModal && !user && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="relative">

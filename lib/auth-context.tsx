@@ -13,17 +13,20 @@ import {
 } from "firebase/auth";
 import {
     addDoc,
+    arrayRemove,
+    arrayUnion,
     collection,
     doc,
     getDoc,
     onSnapshot,
     query,
     setDoc,
+    updateDoc,
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
-import { Event, Movie, User } from "./types";
+import { Event, Movie, Review, User } from "./types";
 
 interface AuthMessage {
     type: 'success' | 'error';
@@ -34,6 +37,7 @@ interface AppContextType {
     user: User | null;
     events: Event[];
     movies: Movie[];
+    reviews: Review[];
     isLoading: boolean;
     isAuthReady: boolean;
     needsNameToProceed: boolean;
@@ -47,6 +51,12 @@ interface AppContextType {
     handleNameSubmit: (name: string) => Promise<void>;
     createEvent: (eventData: Partial<Event>, imageFile?: File | null) => Promise<void>;
     createMovie: (movieData: Partial<Movie>, imageFile?: File | null) => Promise<void>;
+    followEvent: (eventId: string) => Promise<void>;
+    unfollowEvent: (eventId: string) => Promise<void>;
+    isFollowingEvent: (eventId: string) => boolean;
+    submitReview: (movieId: string, rating: number, comment?: string) => Promise<void>;
+    getMovieReviews: (movieId: string) => Review[];
+    getUserReviewForMovie: (movieId: string) => Review | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -69,6 +79,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const [needsNameToProceed, setNeedsNameToProceed] = useState(false);
     const [events, setEvents] = useState<Event[]>([]);
     const [movies, setMovies] = useState<Movie[]>([]);
+    const [reviews, setReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [authMessage, setAuthMessage] = useState<AuthMessage | null>(null);
@@ -255,6 +266,102 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
     };
 
+    const followEvent = async (eventId: string) => {
+        if (!user) throw new Error('User must be authenticated to follow events');
+
+        const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+        await updateDoc(eventDocRef, {
+            followers: arrayUnion(user.uid)
+        });
+
+        // Track event follow
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "follow_event", {
+                        event_id: eventId,
+                    });
+                }
+            });
+        }
+    };
+
+    const unfollowEvent = async (eventId: string) => {
+        if (!user) throw new Error('User must be authenticated to unfollow events');
+
+        const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+        await updateDoc(eventDocRef, {
+            followers: arrayRemove(user.uid)
+        });
+
+        // Track event unfollow
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "unfollow_event", {
+                        event_id: eventId,
+                    });
+                }
+            });
+        }
+    };
+
+    const isFollowingEvent = (eventId: string): boolean => {
+        if (!user) return false;
+        const event = events.find(e => e.id === eventId);
+        return event?.followers?.includes(user.uid) || false;
+    };
+
+    const submitReview = async (movieId: string, rating: number, comment?: string) => {
+        if (!user) throw new Error('User must be authenticated to submit reviews');
+
+        // Check if user already has a review for this movie
+        const existingReview = reviews.find(r => r.movieId === movieId && r.userId === user.uid);
+
+        const reviewData = {
+            movieId,
+            userId: user.uid,
+            userName: user.displayName || 'Anonymous',
+            userAvatar: '', // TODO: Add user avatar support
+            rating,
+            comment: comment || '',
+            createdAt: new Date().toISOString(),
+        };
+
+        if (existingReview) {
+            // Update existing review
+            const reviewDocRef = doc(db, `artifacts/${appId}/public/data/reviews`, existingReview.id);
+            await updateDoc(reviewDocRef, reviewData);
+        } else {
+            // Create new review
+            await addDoc(
+                collection(db, `artifacts/${appId}/public/data/reviews`),
+                reviewData
+            );
+        }
+
+        // Track review submission
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "submit_review", {
+                        movie_id: movieId,
+                        rating: rating,
+                    });
+                }
+            });
+        }
+    };
+
+    const getMovieReviews = (movieId: string): Review[] => {
+        return reviews.filter(review => review.movieId === movieId);
+    };
+
+    const getUserReviewForMovie = (movieId: string): Review | null => {
+        if (!user) return null;
+        return reviews.find(review => review.movieId === movieId && review.userId === user.uid) || null;
+    };
+
     // Check for magic link on component mount
     useEffect(() => {
         const processMagicLink = async () => {
@@ -395,10 +502,53 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return () => unsubscribe();
     }, [isAuthReady, user]);
 
+    // Fetch reviews from Firestore in real-time
+    useEffect(() => {
+        if (!isAuthReady) return;
+        const q = query(collection(db, `artifacts/${appId}/public/data/reviews`));
+        const unsubscribe = onSnapshot(
+            q,
+            (querySnapshot) => {
+                const reviewsData = querySnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                } as Review));
+                setReviews(reviewsData);
+            },
+            (error) => {
+                console.error("Error fetching reviews:", error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [isAuthReady]);
+
+    // Update movie ratings based on reviews
+    useEffect(() => {
+        const updateMovieRatings = () => {
+            setMovies(prevMovies => prevMovies.map(movie => {
+                const movieReviews = reviews.filter(review => review.movieId === movie.id);
+                const totalRatings = movieReviews.length;
+                const averageRating = totalRatings > 0
+                    ? movieReviews.reduce((sum, review) => sum + review.rating, 0) / totalRatings
+                    : undefined;
+
+                return {
+                    ...movie,
+                    averageRating,
+                    totalRatings
+                };
+            }));
+        };
+
+        updateMovieRatings();
+    }, [reviews]);
+
     const contextValue: AppContextType = {
         user,
         events,
         movies,
+        reviews,
         isLoading,
         isAuthReady,
         needsNameToProceed,
@@ -412,6 +562,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         handleNameSubmit,
         createEvent,
         createMovie,
+        followEvent,
+        unfollowEvent,
+        isFollowingEvent,
+        submitReview,
+        getMovieReviews,
+        getUserReviewForMovie,
     };
 
     return (

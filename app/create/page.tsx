@@ -1,18 +1,15 @@
 'use client';
 
 import AuthScreen from "@/components/auth-screen";
-import CreateEventModal from "@/components/create-event-modal";
 import GetUserNameModal from "@/components/get-user-name-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
 import { Calendar, Film, Play, Star, Users } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
 
 export default function CreatePage() {
   const { user, needsNameToProceed, handleNameSubmit } = useAppContext();
-  const [showCreateEventModal, setShowCreateEventModal] = useState(false);
 
   if (!user) {
     return <AuthScreen />;
@@ -92,9 +89,9 @@ export default function CreatePage() {
               </div>
               <Button
                 className="w-full"
-                onClick={() => setShowCreateEventModal(true)}
+                asChild
               >
-                Create Event
+                <Link href="/events/create">Create Event</Link>
               </Button>
             </CardContent>
           </Card>
@@ -107,7 +104,7 @@ export default function CreatePage() {
               </div>
               <CardTitle className="text-2xl">Share a Film</CardTitle>
               <CardDescription>
-                Upload your short films, documentaries, and web episodes
+                Share your movies, short films, documentaries, and web episodes
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -126,7 +123,7 @@ export default function CreatePage() {
                 </div>
               </div>
               <Button className="w-full" variant="outline" asChild>
-                <Link href="/movies/create">Upload Film</Link>
+                <Link href="/movies/create">Share Film</Link>
               </Button>
             </CardContent>
           </Card>
@@ -163,10 +160,6 @@ export default function CreatePage() {
           </div>
         </div>
       </div>
-
-      {showCreateEventModal && (
-        <CreateEventModal onClose={() => setShowCreateEventModal(false)} />
-      )}
     </div>
   );
 }
