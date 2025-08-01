@@ -5,38 +5,68 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
-import { Heart, MessageCircle, Play, Share2, Star, Users } from "lucide-react"
+import { useAppContext } from "@/lib/auth-context"
+import { MessageCircle, Play, Share2, Star } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { use, useState } from "react"
 
 export default function MoviePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const [isFollowing, setIsFollowing] = useState(false)
+  const { movies } = useAppContext()
   const [userRating, setUserRating] = useState<number>(0)
   const [showReviews, setShowReviews] = useState(false)
+  const [videoError, setVideoError] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
 
-  // Mock movie data
-  const movie = {
-    id: id,
-    title: "The Last Journey",
-    description:
-      "A heartwarming story about finding purpose in life's final chapter. When an elderly man embarks on a cross-country road trip to reconnect with his estranged daughter, he discovers that the journey itself holds more meaning than the destination. This touching short film explores themes of family, forgiveness, and the beauty of human connection.",
-    category: "Short Film",
+  // Find the movie from the context
+  const movie = movies.find(m => m.id === id)
+
+  // Helper function to extract video ID and platform
+  const getVideoEmbed = (url: string) => {
+    if (!url) return null;
+
+    try {
+      // YouTube patterns
+      const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      const youtubeMatch = url.match(youtubeRegex);
+      if (youtubeMatch) {
+        return {
+          platform: 'youtube',
+          id: youtubeMatch[1],
+          embedUrl: `https://www.youtube.com/embed/${youtubeMatch[1]}?autoplay=0&rel=0&modestbranding=1`
+        };
+      }
+
+      // Vimeo patterns
+      const vimeoRegex = /(?:vimeo\.com\/)(\d+)/;
+      const vimeoMatch = url.match(vimeoRegex);
+      if (vimeoMatch) {
+        return {
+          platform: 'vimeo',
+          id: vimeoMatch[1],
+          embedUrl: `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=0&title=0&byline=0&portrait=0`
+        };
+      }
+    } catch (error) {
+      console.error('Error parsing video URL:', error);
+    }
+
+    return null;
+  };
+
+  const videoEmbed = movie ? getVideoEmbed(movie.videoUrl) : null;
+
+  // Mock data for fields not yet available in the database
+  const mockData = {
     rating: 4.8,
     totalRatings: 156,
     followers: 890,
-    duration: "18 minutes",
-    releaseYear: 2024,
-    image: "/placeholder.svg?height=400&width=600",
-    videoUrl: "https://youtube.com/watch?v=example",
     creator: {
-      name: "Emma Rodriguez",
       avatar: "/placeholder.svg?height=40&width=40",
       verified: true,
       bio: "Independent filmmaker passionate about human stories",
     },
-    tags: ["Drama", "Family", "Independent", "Award Winner"],
     awards: ["Best Short Film - Indie Film Festival 2024", "Audience Choice Award"],
   }
 
@@ -70,14 +100,39 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
     ))
   }
 
+  // Loading state
+  if (!movie) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Link href="/movies" className="text-lg font-semibold hover:text-primary">
+                ← Back to Movies
+              </Link>
+            </div>
+          </div>
+        </header>
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-6xl mx-auto flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading movie...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="text-lg font-semibold hover:text-primary">
-              ← Back to Home
+            <Link href="/movies" className="text-lg font-semibold hover:text-primary">
+              ← Back to Movies
             </Link>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
@@ -97,20 +152,49 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
               {/* Video Player / Poster */}
               <div className="relative">
                 <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                  <Image
-                    src={movie.image || "/placeholder.svg"}
-                    alt={movie.title}
-                    width={600}
-                    height={400}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button size="lg" className="rounded-full w-16 h-16">
-                      <Play className="w-6 h-6 ml-1" />
-                    </Button>
-                  </div>
+                  {videoEmbed && !videoError ? (
+                    <iframe
+                      src={videoEmbed.embedUrl}
+                      title={movie.title}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      onError={() => setVideoError(true)}
+                    />
+                  ) : movie.imageUrl ? (
+                    <>
+                      <Image
+                        src={movie.imageUrl}
+                        alt={movie.title}
+                        width={600}
+                        height={400}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Button
+                          size="lg"
+                          className="rounded-full w-16 h-16"
+                          onClick={() => window.open(movie.videoUrl, '_blank')}
+                        >
+                          <Play className="w-6 h-6 ml-1" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <Button
+                        size="lg"
+                        className="rounded-full w-16 h-16"
+                        onClick={() => window.open(movie.videoUrl, '_blank')}
+                      >
+                        <Play className="w-6 h-6 ml-1" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
-                <Badge className="absolute top-4 left-4 text-sm">{movie.category}</Badge>
+                <Badge className="absolute top-4 left-4 text-sm">
+                  {movie.category || "Film"}
+                </Badge>
               </div>
 
               {/* Title and Creator */}
@@ -118,32 +202,28 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
                 <h1 className="text-3xl md:text-4xl font-bold mb-4">{movie.title}</h1>
                 <div className="flex items-center space-x-3 mb-4">
                   <Avatar>
-                    <AvatarImage src={movie.creator.avatar || "/placeholder.svg"} alt={movie.creator.name} />
-                    <AvatarFallback>ER</AvatarFallback>
+                    <AvatarImage src={mockData.creator.avatar} alt={movie.creatorName} />
+                    <AvatarFallback>{movie.creatorName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="font-medium">{movie.creator.name}</span>
-                      {movie.creator.verified && (
+                      <span className="font-medium">{movie.creatorName}</span>
+                      {mockData.creator.verified && (
                         <Badge variant="secondary" className="text-xs">
                           Verified
                         </Badge>
                       )}
                     </div>
-                    <span className="text-sm text-muted-foreground">{movie.creator.bio}</span>
+                    <span className="text-sm text-muted-foreground">{mockData.creator.bio}</span>
                   </div>
                 </div>
 
                 {/* Rating and Stats */}
                 <div className="flex items-center space-x-6 mb-4">
                   <div className="flex items-center space-x-2">
-                    <div className="flex">{renderStars(Math.floor(movie.rating))}</div>
-                    <span className="font-medium">{movie.rating}</span>
-                    <span className="text-sm text-muted-foreground">({movie.totalRatings} ratings)</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{movie.followers} followers</span>
+                    <div className="flex">{renderStars(Math.floor(mockData.rating))}</div>
+                    <span className="font-medium">{mockData.rating}</span>
+                    <span className="text-sm text-muted-foreground">({mockData.totalRatings} ratings)</span>
                   </div>
                 </div>
               </div>
@@ -151,11 +231,16 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
               {/* Description */}
               <div>
                 <h2 className="text-xl font-semibold mb-3">About This Film</h2>
-                <p className="text-muted-foreground leading-relaxed">{movie.description}</p>
+                {movie.logLine && (
+                  <p className="text-lg font-medium text-foreground mb-3 italic">
+                    &ldquo;{movie.logLine}&rdquo;
+                  </p>
+                )}
+                <p className="text-muted-foreground leading-relaxed">{movie.synopsis}</p>
               </div>
 
               {/* Awards */}
-              {movie.awards.length > 0 && (
+              {movie.awards && movie.awards.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Awards & Recognition</h3>
                   <div className="space-y-2">
@@ -169,16 +254,18 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
               )}
 
               {/* Tags */}
-              <div>
-                <h3 className="font-medium mb-2">Tags</h3>
-                <div className="flex flex-wrap gap-2">
-                  {movie.tags.map((tag) => (
-                    <Badge key={tag} variant="outline">
-                      {tag}
-                    </Badge>
-                  ))}
+              {movie.tags && movie.tags.length > 0 && (
+                <div>
+                  <h3 className="font-medium mb-2">Tags</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {movie.tags.map((tag) => (
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Reviews Section */}
               <div>
@@ -239,23 +326,29 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
                   <CardTitle className="text-lg">Movie Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Duration</span>
-                    <span className="font-medium">{movie.duration}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Release Year</span>
-                    <span className="font-medium">{movie.releaseYear}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Category</span>
-                    <span className="font-medium">{movie.category}</span>
-                  </div>
+                  {movie.duration && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Duration</span>
+                      <span className="font-medium">{movie.duration}</span>
+                    </div>
+                  )}
+                  {movie.releaseYear && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Release Year</span>
+                      <span className="font-medium">{movie.releaseYear}</span>
+                    </div>
+                  )}
+                  {movie.category && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Category</span>
+                      <span className="font-medium">{movie.category}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Rating</span>
                     <div className="flex items-center space-x-1">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="font-medium">{movie.rating}/5</span>
+                      <span className="font-medium">{mockData.rating}/5</span>
                     </div>
                   </div>
                 </CardContent>
@@ -264,30 +357,31 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
               {/* Action Buttons */}
               <Card>
                 <CardContent className="pt-6 space-y-3">
-                  <Button className="w-full" size="lg">
-                    <Play className="w-4 h-4 mr-2" />
-                    Watch Now
-                  </Button>
+                  {videoEmbed && !videoError ? (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={() => window.open(movie.videoUrl, '_blank')}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Watch on {videoEmbed.platform === 'youtube' ? 'YouTube' : 'Vimeo'}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={() => window.open(movie.videoUrl, '_blank')}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Watch on {videoEmbed?.platform === 'youtube' ? 'YouTube' : videoEmbed?.platform === 'vimeo' ? 'Vimeo' : 'External Site'}
+                    </Button>
+                  )}
 
                   <Button
                     className="w-full bg-transparent"
                     variant="outline"
-                    onClick={() => setIsFollowing(!isFollowing)}
+                    onClick={() => setShowShareModal(true)}
                   >
-                    {isFollowing ? (
-                      <>
-                        <Heart className="w-4 h-4 mr-2 fill-red-500 text-red-500" />
-                        Following
-                      </>
-                    ) : (
-                      <>
-                        <Heart className="w-4 h-4 mr-2" />
-                        Follow Movie
-                      </>
-                    )}
-                  </Button>
-
-                  <Button className="w-full bg-transparent" variant="outline">
                     <Share2 className="w-4 h-4 mr-2" />
                     Share Movie
                   </Button>
@@ -302,15 +396,15 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
                 <CardContent>
                   <div className="flex items-center space-x-3 mb-3">
                     <Avatar>
-                      <AvatarImage src={movie.creator.avatar || "/placeholder.svg"} alt={movie.creator.name} />
-                      <AvatarFallback>ER</AvatarFallback>
+                      <AvatarImage src={mockData.creator.avatar} alt={movie.creatorName} />
+                      <AvatarFallback>{movie.creatorName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="font-medium">{movie.creator.name}</div>
+                      <div className="font-medium">{movie.creatorName}</div>
                       <div className="text-sm text-muted-foreground">Filmmaker</div>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">{movie.creator.bio}</p>
+                  <p className="text-sm text-muted-foreground mb-3">{mockData.creator.bio}</p>
                   <Button variant="outline" size="sm" className="w-full bg-transparent">
                     View Profile
                   </Button>
@@ -318,43 +412,159 @@ export default function MoviePage({ params }: { params: Promise<{ id: string }> 
               </Card>
 
               {/* Related Movies */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">More Like This</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center space-x-3">
-                    <Image
-                      src="/placeholder.svg?height=60&width=60"
-                      alt="Related movie"
-                      width={60}
-                      height={60}
-                      className="rounded-lg object-cover"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">Digital Dreams</div>
-                      <div className="text-xs text-muted-foreground">Web Episode • 4.6★</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <Image
-                      src="/placeholder.svg?height=60&width=60"
-                      alt="Related movie"
-                      width={60}
-                      height={60}
-                      className="rounded-lg object-cover"
-                    />
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">City Lights</div>
-                      <div className="text-xs text-muted-foreground">Short Film • 4.4★</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              {(() => {
+                const recentMovies = movies
+                  .filter(m => m.id !== movie.id)
+                  .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                  .slice(0, 2);
+
+                if (recentMovies.length === 0) return null;
+
+                return (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">More Like This</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {recentMovies.map((relatedMovie) => (
+                        <Link key={relatedMovie.id} href={`/movies/${relatedMovie.id}`}>
+                          <div className="flex items-center space-x-3 hover:bg-accent/50 rounded-lg p-2 transition-colors">
+                            {relatedMovie.imageUrl ? (
+                              <Image
+                                src={relatedMovie.imageUrl}
+                                alt={relatedMovie.title}
+                                width={60}
+                                height={60}
+                                className="rounded-lg object-cover w-15 h-15"
+                              />
+                            ) : (
+                              <div className="w-15 h-15 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center">
+                                <Play className="w-6 h-6 text-primary/50" />
+                              </div>
+                            )}
+                            <div className="flex-1">
+                              <div className="font-medium text-sm line-clamp-1">{relatedMovie.title}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {relatedMovie.category || 'Film'} • ⭐ 4.6
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in-0 duration-300">
+          <Card className="w-full max-w-md shadow-2xl border-0 bg-gradient-to-b from-card to-card/95 animate-in slide-in-from-bottom-4 duration-300">
+            <CardHeader className="pb-4">
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-xl font-bold">Share Movie</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowShareModal(false)}
+                  className="h-8 w-8 p-0 rounded-full"
+                >
+                  ✕
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-3 p-3 bg-accent/20 rounded-lg">
+                {movie.imageUrl ? (
+                  <Image
+                    src={movie.imageUrl}
+                    alt={movie.title}
+                    width={60}
+                    height={60}
+                    className="rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-15 h-15 bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg flex items-center justify-center">
+                    <Play className="w-6 h-6 text-primary/50" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <h3 className="font-medium line-clamp-1">{movie.title}</h3>
+                  <p className="text-sm text-muted-foreground">by {movie.creatorName}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <span className="text-sm text-muted-foreground flex-1 truncate mr-2">
+                    {typeof window !== 'undefined' ? window.location.href : ''}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        navigator.clipboard.writeText(window.location.href);
+                      }
+                    }}
+                  >
+                    Copy Link
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                      const text = encodeURIComponent(`Check out "${movie.title}" by ${movie.creatorName}`);
+                      window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
+                    }}
+                  >
+                    Twitter
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                      window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+                    }}
+                  >
+                    Facebook
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                      const title = encodeURIComponent(`${movie.title} by ${movie.creatorName}`);
+                      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`, '_blank');
+                    }}
+                  >
+                    LinkedIn
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: movie.title,
+                          text: `Check out "${movie.title}" by ${movie.creatorName}`,
+                          url: typeof window !== 'undefined' ? window.location.href : '',
+                        });
+                      }
+                    }}
+                  >
+                    More
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

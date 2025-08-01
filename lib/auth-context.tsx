@@ -23,7 +23,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
-import { Event, User } from "./types";
+import { Event, Movie, User } from "./types";
 
 interface AuthMessage {
     type: 'success' | 'error';
@@ -33,6 +33,7 @@ interface AuthMessage {
 interface AppContextType {
     user: User | null;
     events: Event[];
+    movies: Movie[];
     isLoading: boolean;
     isAuthReady: boolean;
     needsNameToProceed: boolean;
@@ -45,6 +46,7 @@ interface AppContextType {
     handleEmailLinkSignIn: (e: React.FormEvent) => Promise<void>;
     handleNameSubmit: (name: string) => Promise<void>;
     createEvent: (eventData: Partial<Event>, imageFile?: File | null) => Promise<void>;
+    createMovie: (movieData: Partial<Movie>, imageFile?: File | null) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -66,6 +68,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const [isAuthReady, setIsAuthReady] = useState(false);
     const [needsNameToProceed, setNeedsNameToProceed] = useState(false);
     const [events, setEvents] = useState<Event[]>([]);
+    const [movies, setMovies] = useState<Movie[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [authMessage, setAuthMessage] = useState<AuthMessage | null>(null);
@@ -213,6 +216,45 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
     };
 
+    const createMovie = async (movieData: Partial<Movie>, imageFile?: File | null) => {
+        if (!user) throw new Error('User must be authenticated to create movies');
+
+        let imageUrl = "";
+        if (imageFile) {
+            const imageRef = ref(
+                storage,
+                `movie-images/${appId}/${imageFile.name}-${Date.now()}`
+            );
+            const snapshot = await uploadBytes(imageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        const completeMovieData = {
+            ...movieData,
+            imageUrl,
+            creatorId: user.uid,
+            creatorName: user.displayName || 'Unknown',
+            createdAt: new Date().toISOString(),
+        };
+
+        await addDoc(
+            collection(db, `artifacts/${appId}/public/data/movies`),
+            completeMovieData
+        );
+
+        // Success
+        if (analytics) {
+            // Track movie creation
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "create_movie", {
+                        category: movieData.category || "unknown",
+                    });
+                }
+            });
+        }
+    };
+
     // Check for magic link on component mount
     useEffect(() => {
         const processMagicLink = async () => {
@@ -323,9 +365,40 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return () => unsubscribe();
     }, [isAuthReady, user]);
 
+    // Fetch movies from Firestore in real-time
+    useEffect(() => {
+        if (!isAuthReady) return;
+        const q = query(collection(db, `artifacts/${appId}/public/data/movies`));
+        const unsubscribe = onSnapshot(
+            q,
+            (querySnapshot) => {
+                const moviesData = querySnapshot.docs
+                    .map((doc) => ({
+                        id: doc.id,
+                        ...doc.data(),
+                    } as Movie))
+                    .filter((movie) => {
+                        // Hide deleted movies for everyone
+                        if (movie.deleted) return false;
+                        // Hide paused movies for everyone except the owner
+                        if (movie.paused && (!user || user.uid !== movie.creatorId))
+                            return false;
+                        return true;
+                    });
+                setMovies(moviesData);
+            },
+            (error) => {
+                console.error("Error fetching movies:", error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [isAuthReady, user]);
+
     const contextValue: AppContextType = {
         user,
         events,
+        movies,
         isLoading,
         isAuthReady,
         needsNameToProceed,
@@ -338,6 +411,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         handleEmailLinkSignIn,
         handleNameSubmit,
         createEvent,
+        createMovie,
     };
 
     return (

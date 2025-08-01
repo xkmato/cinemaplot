@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
-import { Calendar, Clock, DollarSign, Link as LinkIcon, MapPin, Play, Share2, Users } from "lucide-react";
+import { Calendar, Clock, DollarSign, Film, Link as LinkIcon, MapPin, Play, Share2, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
@@ -109,6 +109,12 @@ export default function EventDetailPage() {
                     {event.numberOfDays} days
                   </Badge>
                 )}
+                {event.isMoviePremiere && (
+                  <Badge className="absolute top-4 right-4 bg-red-600 hover:bg-red-700" variant="default">
+                    <Film className="w-3 h-3 mr-1" />
+                    Movie Premiere
+                  </Badge>
+                )}
               </div>
             )}
 
@@ -173,6 +179,15 @@ export default function EventDetailPage() {
 
               {/* Action Buttons */}
               <div className="space-y-3">
+                {event.isMoviePremiere && event.trailerUrl && (
+                  <Button className="w-full bg-red-600 hover:bg-red-700" asChild>
+                    <a href={event.trailerUrl} target="_blank" rel="noopener noreferrer">
+                      <Film className="w-4 h-4 mr-2" />
+                      Watch Trailer
+                    </a>
+                  </Button>
+                )}
+
                 {event.eventLink && (
                   <Button className="w-full" asChild>
                     <a href={event.eventLink} target="_blank" rel="noopener noreferrer">

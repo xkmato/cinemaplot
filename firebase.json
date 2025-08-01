@@ -6,36 +6,19 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "public": "build",
+    "source": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/bkp/**",
       "**/node_modules/**"
     ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
+    "frameworksBackend": {
+      "region": "us-central1"
+    }
   },
   "storage": {
     "rules": "storage.rules"
   },
-  "functions": [
-    {
-      "source": "functions",
-      "codebase": "default",
-      "ignore": [
-        "venv",
-        ".git",
-        "firebase-debug.log",
-        "firebase-debug.*.log"
-      ],
-      "runtime": "python312"
-    }
-  ],
   "emulators": {
     "firestore": {
       "port": 8081

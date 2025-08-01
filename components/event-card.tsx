@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Event } from "@/lib/types";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, Film, MapPin, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -34,6 +34,12 @@ export default function EventCard({ event, onClick, showViewButton = true }: Eve
                     {event.isMultiDay && (
                         <Badge className="absolute top-2 left-2" variant="secondary">
                             {event.numberOfDays} days
+                        </Badge>
+                    )}
+                    {event.isMoviePremiere && (
+                        <Badge className="absolute top-2 right-2 bg-red-600 hover:bg-red-700" variant="default">
+                            <Film className="w-3 h-3 mr-1" />
+                            Movie Premiere
                         </Badge>
                     )}
                 </div>
@@ -67,6 +73,20 @@ export default function EventCard({ event, onClick, showViewButton = true }: Eve
                     {event.price && (
                         <div className="text-sm font-medium text-primary">
                             {event.price}
+                        </div>
+                    )}
+                    {event.isMoviePremiere && event.trailerUrl && (
+                        <div className="text-sm">
+                            <a
+                                href={event.trailerUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-red-600 hover:text-red-800 font-medium flex items-center"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <Film className="w-4 h-4 mr-1" />
+                                Watch Trailer
+                            </a>
                         </div>
                     )}
                 </div>
