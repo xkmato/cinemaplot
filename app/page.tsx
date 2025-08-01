@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
-import { isEventUpcomingOrOngoing } from "@/lib/helpers";
+import { isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { Calendar, Play, Star } from "lucide-react";
@@ -19,9 +19,9 @@ export default function HomePage() {
   const { user, events, movies, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // Get recent events for homepage
+  // Get recent events for homepage (excluding events longer than a week)
   const recentEvents = events
-    .filter(event => isEventUpcomingOrOngoing(event))
+    .filter(event => isEventUpcomingOrOngoing(event) && !isEventLongerThanWeek(event))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 2);
 

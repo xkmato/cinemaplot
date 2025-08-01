@@ -60,7 +60,7 @@ export const isEventUpcomingOrOngoing = (event: Event, today: string = new Date(
   
   // For multi-day events, check if today falls within the event's date range
   if (event.endDate) {
-    return today >= eventStartDate && today <= event.endDate;
+    return today <= event.endDate;
   }
   
   // Fallback: if no endDate but has numberOfDays, calculate the end date
@@ -99,4 +99,29 @@ export const isEventInPast = (event: Event, today: string = new Date().toISOStri
   
   // Default behavior: treat as single day event
   return event.date < today;
+};
+
+// Check if an event runs for more than a week (7 days)
+export const isEventLongerThanWeek = (event: Event): boolean => {
+  // For single day events, it's never longer than a week
+  if (!event.isMultiDay) {
+    return false;
+  }
+  
+  // Check using numberOfDays if available
+  if (event.numberOfDays) {
+    return event.numberOfDays > 7;
+  }
+  
+  // Check using start and end dates
+  if (event.endDate) {
+    const startDate = new Date(event.date);
+    const endDate = new Date(event.endDate);
+    const diffInTime = endDate.getTime() - startDate.getTime();
+    const diffInDays = Math.ceil(diffInTime / (1000 * 3600 * 24)) + 1; // +1 to include both start and end days
+    return diffInDays > 7;
+  }
+  
+  // Default: if it's marked as multi-day but no duration info, assume it's not longer than a week
+  return false;
 };
