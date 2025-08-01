@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { appId, db } from "@/lib/firebase";
+import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { generateEventStructuredData } from "@/lib/seo";
 import { Event } from "@/lib/types";
 import { shouldUseUnoptimized } from "@/lib/utils";
@@ -22,11 +23,14 @@ interface EventDetailClientProps {
 }
 
 export default function EventDetailClient({ eventId }: EventDetailClientProps) {
-    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user } = useAppContext();
+    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments } = useAppContext();
     const [showComments, setShowComments] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
     const [singleEvent, setSingleEvent] = useState<Event | null>(null);
     const [isFetchingEvent, setIsFetchingEvent] = useState(false);
     const [eventNotFound, setEventNotFound] = useState(false);
+    const [commentText, setCommentText] = useState("");
+    const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
     // Effect to fetch single event when events list is empty and we have an eventId
     useEffect(() => {
@@ -43,7 +47,6 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                     setIsFetchingEvent(true);
                     const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
                     const eventDoc = await getDoc(eventDocRef);
-                    console.log('Fetched event:', eventDoc.id, eventDoc.data());
 
                     if (eventDoc.exists()) {
                         const eventData = { id: eventDoc.id, ...eventDoc.data() } as Event;
@@ -77,7 +80,6 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
     // Determine which event to use - from context or single fetch
     let currentEvent: Event | undefined;
     if (events.length > 0) {
-        console.log('Using context events:', events);
         currentEvent = events.find(e => e.id === eventId);
     } else if (singleEvent) {
         currentEvent = singleEvent;
@@ -103,6 +105,28 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         }
     };
 
+    const handleCommentSubmit = async () => {
+        if (!user) {
+            alert('Please sign in to comment');
+            return;
+        }
+
+        if (!commentText.trim()) {
+            return;
+        }
+
+        try {
+            setIsSubmittingComment(true);
+            await submitComment(eventId, commentText.trim());
+            setCommentText("");
+        } catch (error) {
+            console.error('Error submitting comment:', error);
+            alert('Failed to submit comment. Please try again.');
+        } finally {
+            setIsSubmittingComment(false);
+        }
+    };
+
     // Show loading if we're still loading context or fetching a single event
     if (isLoading || isFetchingEvent) {
         return (
@@ -115,7 +139,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                 ← Back to Home
                             </Link>
                             <div className="flex items-center space-x-2">
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
@@ -150,7 +174,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                 ← Back to Home
                             </Link>
                             <div className="flex items-center space-x-2">
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
@@ -179,30 +203,37 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         price: currentEvent.price || "Free",
         followers: currentEvent.followers?.length || 0,
         ticketingLink: currentEvent.eventLink || "https://eventbrite.com/tech-conf-2024",
-        image: currentEvent.imageUrl || "/placeholder.svg?height=400&width=800",
+        image: currentEvent.imageUrl || createPlaceholderDataUrl('event', currentEvent.title, 800, 400),
         organizer: {
             name: currentEvent.creatorName || "Event Organizer",
-            avatar: "/placeholder.svg?height=40&width=40",
+            avatar: undefined as string | undefined,
             verified: true,
         },
-        tags: ["Technology", "Networking", "Innovation", "AI", "Startups"],
         isPastEvent: false,
     };
 
-    const comments = [
-        {
-            id: 1,
-            user: { name: "Sarah Chen", avatar: "/placeholder.svg?height=32&width=32" },
-            content: "Really excited for this event! The speaker lineup looks amazing.",
-            timestamp: "2 hours ago",
-        },
-        {
-            id: 2,
-            user: { name: "Mike Johnson", avatar: "/placeholder.svg?height=32&width=32" },
-            content: "Will there be recordings available for those who can't attend in person?",
-            timestamp: "5 hours ago",
-        },
-    ];
+    // Get real comments for this event
+    const comments = getEventComments(eventId);
+
+    // Utility function to format timestamp
+    const formatTimestamp = (timestamp: string) => {
+        const now = new Date();
+        const commentDate = new Date(timestamp);
+        const diffMs = now.getTime() - commentDate.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffMinutes < 60) {
+            return diffMinutes <= 1 ? "just now" : `${diffMinutes} minutes ago`;
+        } else if (diffHours < 24) {
+            return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
+        } else if (diffDays < 7) {
+            return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
+        } else {
+            return commentDate.toLocaleDateString();
+        }
+    };
 
     // Filter events happening on the same day (excluding current event)
     const eventDate = new Date(eventData.date);
@@ -231,7 +262,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                 ← Back to Home
                             </Link>
                             <div className="flex items-center space-x-2">
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
@@ -245,7 +276,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                         {/* Hero Image */}
                         <div className="relative mb-8">
                             <Image
-                                src={eventData.image || "/placeholder.svg"}
+                                src={eventData.image}
                                 alt={eventData.title}
                                 width={800}
                                 height={400}
@@ -263,8 +294,8 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                     <h1 className="text-3xl md:text-4xl font-bold mb-4">{eventData.title}</h1>
                                     <div className="flex items-center space-x-3 mb-4">
                                         <Avatar>
-                                            <AvatarImage src={eventData.organizer.avatar || "/placeholder.svg"} alt={eventData.organizer.name} />
-                                            <AvatarFallback>EO</AvatarFallback>
+                                            <AvatarImage src={eventData.organizer.avatar || undefined} alt={eventData.organizer.name} />
+                                            <AvatarFallback>{eventData.organizer.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                                         </Avatar>
                                         <div>
                                             <div className="flex items-center space-x-2">
@@ -287,16 +318,18 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                 </div>
 
                                 {/* Tags */}
-                                <div>
-                                    <h3 className="font-medium mb-2">Tags</h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {(currentEvent.tags || eventData.tags).map((tag) => (
-                                            <Badge key={tag} variant="outline">
-                                                {tag}
-                                            </Badge>
-                                        ))}
+                                {currentEvent.tags && currentEvent.tags.length > 0 && (
+                                    <div>
+                                        <h3 className="font-medium mb-2">Tags</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {currentEvent.tags.map((tag) => (
+                                                <Badge key={tag} variant="outline">
+                                                    {tag}
+                                                </Badge>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Comments Section */}
                                 <div>
@@ -310,34 +343,63 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
                                     {showComments && (
                                         <div className="space-y-4">
-                                            <Card>
-                                                <CardContent className="pt-4">
-                                                    <Textarea placeholder="Share your thoughts about this event..." />
-                                                    <Button className="mt-2" size="sm">
-                                                        Post Comment
-                                                    </Button>
-                                                </CardContent>
-                                            </Card>
-
-                                            {comments.map((comment) => (
-                                                <Card key={comment.id}>
+                                            {user ? (
+                                                <Card>
                                                     <CardContent className="pt-4">
-                                                        <div className="flex items-start space-x-3">
-                                                            <Avatar className="w-8 h-8">
-                                                                <AvatarImage src={comment.user.avatar || "/placeholder.svg"} alt={comment.user.name} />
-                                                                <AvatarFallback>{comment.user.name[0]}</AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="flex-1">
-                                                                <div className="flex items-center space-x-2 mb-1">
-                                                                    <span className="font-medium text-sm">{comment.user.name}</span>
-                                                                    <span className="text-xs text-muted-foreground">{comment.timestamp}</span>
-                                                                </div>
-                                                                <p className="text-sm">{comment.content}</p>
-                                                            </div>
-                                                        </div>
+                                                        <Textarea
+                                                            placeholder="Share your thoughts about this event..."
+                                                            value={commentText}
+                                                            onChange={(e) => setCommentText(e.target.value)}
+                                                        />
+                                                        <Button
+                                                            className="mt-2"
+                                                            size="sm"
+                                                            onClick={handleCommentSubmit}
+                                                            disabled={isSubmittingComment || !commentText.trim()}
+                                                        >
+                                                            {isSubmittingComment ? "Posting..." : "Post Comment"}
+                                                        </Button>
                                                     </CardContent>
                                                 </Card>
-                                            ))}
+                                            ) : (
+                                                <Card>
+                                                    <CardContent className="pt-4">
+                                                        <p className="text-sm text-muted-foreground text-center py-4">
+                                                            Please sign in to join the discussion
+                                                        </p>
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {comments.length === 0 ? (
+                                                <Card>
+                                                    <CardContent className="pt-4">
+                                                        <p className="text-sm text-muted-foreground text-center py-4">
+                                                            No comments yet. Be the first to share your thoughts!
+                                                        </p>
+                                                    </CardContent>
+                                                </Card>
+                                            ) : (
+                                                comments.map((comment) => (
+                                                    <Card key={comment.id}>
+                                                        <CardContent className="pt-4">
+                                                            <div className="flex items-start space-x-3">
+                                                                <Avatar className="w-8 h-8">
+                                                                    <AvatarImage src={comment.userAvatar || undefined} alt={comment.userName} />
+                                                                    <AvatarFallback>{comment.userName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="flex-1">
+                                                                    <div className="flex items-center space-x-2 mb-1">
+                                                                        <span className="font-medium text-sm">{comment.userName}</span>
+                                                                        <span className="text-xs text-muted-foreground">{formatTimestamp(comment.createdAt)}</span>
+                                                                    </div>
+                                                                    <p className="text-sm">{comment.content}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -427,7 +489,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                             </Button>
                                         )}
 
-                                        <Button className="w-full bg-transparent" variant="outline">
+                                        <Button className="w-full bg-transparent" variant="outline" onClick={() => setShowShareModal(true)}>
                                             <Share2 className="w-4 h-4 mr-2" />
                                             Share Event
                                         </Button>
@@ -473,6 +535,107 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Share Modal */}
+            {showShareModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in-0 duration-300">
+                    <Card className="w-full max-w-md shadow-2xl border-0 bg-gradient-to-b from-card to-card/95 animate-in slide-in-from-bottom-4 duration-300">
+                        <CardHeader className="pb-4">
+                            <div className="flex justify-between items-center">
+                                <CardTitle className="text-xl font-bold">Share Event</CardTitle>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowShareModal(false)}
+                                    className="h-8 w-8 p-0 rounded-full"
+                                >
+                                    ✕
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center space-x-3 p-3 bg-accent/20 rounded-lg">
+                                <Image
+                                    src={eventData.image}
+                                    alt={eventData.title}
+                                    width={60}
+                                    height={60}
+                                    className="rounded-lg object-cover"
+                                    unoptimized={eventData.image ? shouldUseUnoptimized(eventData.image) : false}
+                                />
+                                <div className="flex-1">
+                                    <h3 className="font-medium line-clamp-1">{eventData.title}</h3>
+                                    <p className="text-sm text-muted-foreground">by {eventData.organizer.name}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 border rounded-lg">
+                                    <span className="text-sm text-muted-foreground flex-1 truncate mr-2">
+                                        {typeof window !== 'undefined' ? window.location.href : ''}
+                                    </span>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            if (typeof window !== 'undefined') {
+                                                navigator.clipboard.writeText(window.location.href);
+                                            }
+                                        }}
+                                    >
+                                        Copy Link
+                                    </Button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                                            const text = encodeURIComponent(`Check out "${eventData.title}" by ${eventData.organizer.name}`);
+                                            window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
+                                        }}
+                                    >
+                                        Twitter
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                                            window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+                                        }}
+                                    >
+                                        Facebook
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            const url = encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '');
+                                            const title = encodeURIComponent(`${eventData.title} by ${eventData.organizer.name}`);
+                                            window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}&title=${title}`, '_blank');
+                                        }}
+                                    >
+                                        LinkedIn
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: eventData.title,
+                                                    text: `Check out "${eventData.title}" by ${eventData.organizer.name}`,
+                                                    url: typeof window !== 'undefined' ? window.location.href : '',
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        More
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
         </>
     );
 }

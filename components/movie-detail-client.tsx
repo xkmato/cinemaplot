@@ -94,7 +94,7 @@ export default function MovieDetailClient({ movieId }: MovieDetailClientProps) {
     const mockData = {
         followers: 890,
         creator: {
-            avatar: "/placeholder.svg?height=40&width=40",
+            avatar: undefined as string | undefined,
             verified: true,
             bio: "Independent filmmaker passionate about human stories",
         },
@@ -156,7 +156,7 @@ export default function MovieDetailClient({ movieId }: MovieDetailClientProps) {
                                 ← Back to Movies
                             </Link>
                             <div className="flex items-center space-x-2">
-                                <Button variant="outline" size="sm">
+                                <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share
                                 </Button>
@@ -347,8 +347,8 @@ export default function MovieDetailClient({ movieId }: MovieDetailClientProps) {
                                                         <CardContent className="pt-4">
                                                             <div className="flex items-start space-x-3">
                                                                 <Avatar className="w-8 h-8">
-                                                                    <AvatarImage src={review.userAvatar || "/placeholder.svg"} alt={review.userName} />
-                                                                    <AvatarFallback>{review.userName[0]?.toUpperCase() || '?'}</AvatarFallback>
+                                                                    <AvatarImage src={review.userAvatar || undefined} alt={review.userName} />
+                                                                    <AvatarFallback>{review.userName.substring(0, 2).toUpperCase() || '??'}</AvatarFallback>
                                                                 </Avatar>
                                                                 <div className="flex-1">
                                                                     <div className="flex items-center space-x-2 mb-1">

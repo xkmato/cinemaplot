@@ -26,7 +26,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
-import { Event, Movie, Review, User } from "./types";
+import { Comment, Event, Movie, Review, User } from "./types";
 
 interface AuthMessage {
     type: 'success' | 'error';
@@ -38,6 +38,7 @@ interface AppContextType {
     events: Event[];
     movies: Movie[];
     reviews: Review[];
+    comments: Comment[];
     isLoading: boolean;
     isAuthReady: boolean;
     needsNameToProceed: boolean;
@@ -57,6 +58,8 @@ interface AppContextType {
     submitReview: (movieId: string, rating: number, comment?: string) => Promise<void>;
     getMovieReviews: (movieId: string) => Review[];
     getUserReviewForMovie: (movieId: string) => Review | null;
+    submitComment: (eventId: string, content: string) => Promise<void>;
+    getEventComments: (eventId: string) => Comment[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -80,6 +83,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const [events, setEvents] = useState<Event[]>([]);
     const [movies, setMovies] = useState<Movie[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
+    const [comments, setComments] = useState<Comment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [authMessage, setAuthMessage] = useState<AuthMessage | null>(null);
@@ -362,6 +366,40 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return reviews.find(review => review.movieId === movieId && review.userId === user.uid) || null;
     };
 
+    const submitComment = async (eventId: string, content: string) => {
+        if (!user) throw new Error('User must be authenticated to submit comments');
+
+        const commentData = {
+            eventId,
+            userId: user.uid,
+            userName: user.displayName || 'Anonymous',
+            userAvatar: '', // TODO: Add user avatar support
+            content,
+            createdAt: new Date().toISOString(),
+        };
+
+        await addDoc(
+            collection(db, `artifacts/${appId}/public/data/comments`),
+            commentData
+        );
+
+        // Track comment submission
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "submit_comment", {
+                        event_id: eventId,
+                    });
+                }
+            });
+        }
+    };
+
+    const getEventComments = (eventId: string): Comment[] => {
+        return comments.filter(comment => comment.eventId === eventId)
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    };
+
     // Check for magic link on component mount
     useEffect(() => {
         const processMagicLink = async () => {
@@ -523,6 +561,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return () => unsubscribe();
     }, [isAuthReady]);
 
+    // Fetch comments from Firestore in real-time
+    useEffect(() => {
+        if (!isAuthReady) return;
+        const q = query(collection(db, `artifacts/${appId}/public/data/comments`));
+        const unsubscribe = onSnapshot(
+            q,
+            (querySnapshot) => {
+                const commentsData = querySnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                } as Comment));
+                setComments(commentsData);
+            },
+            (error) => {
+                console.error("Error fetching comments:", error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [isAuthReady]);
+
     // Update movie ratings based on reviews
     useEffect(() => {
         const updateMovieRatings = () => {
@@ -549,6 +608,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         events,
         movies,
         reviews,
+        comments,
         isLoading,
         isAuthReady,
         needsNameToProceed,
@@ -568,6 +628,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         submitReview,
         getMovieReviews,
         getUserReviewForMovie,
+        submitComment,
+        getEventComments,
     };
 
     return (

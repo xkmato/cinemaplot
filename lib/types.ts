@@ -61,3 +61,13 @@ export interface Review {
   comment?: string;
   createdAt: string; // ISO string
 }
+
+export interface Comment {
+  id: string;
+  eventId: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string; // ISO string
+}
