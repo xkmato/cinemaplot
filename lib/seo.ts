@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Event, Movie } from './types';
+import { Event, Movie, Screenplay } from './types';
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://cinemaplot.com';
 
@@ -28,12 +28,14 @@ export function generateSEOMetadata({
       'events',
       'movies',
       'films',
+      'screenplays',
+      'scripts',
       'community',
-      'creators',
       'filmmakers',
-      'entertainment',
+      'cinema',
+      'cinemaplot',
       ...keywords,
-    ],
+    ].join(', '),
     openGraph: {
       type,
       locale: 'en_US',
@@ -118,6 +120,28 @@ export function generateMovieMetadata(movie: Movie): Metadata {
   });
 }
 
+export function generateScreenplayMetadata(screenplay: Screenplay): Metadata {
+  const keywords = [
+    'screenplay',
+    'script',
+    'short film',
+    ...(screenplay.genre ? [screenplay.genre] : []),
+    ...(screenplay.tags || []),
+  ].filter(Boolean);
+
+  const description = screenplay.logLine 
+    ? `${screenplay.logLine} ${screenplay.synopsis?.slice(0, 100)}...`
+    : `${screenplay.synopsis?.slice(0, 155)}...`;
+
+  return generateSEOMetadata({
+    title: `${screenplay.title} - Screenplay by ${screenplay.creatorName}`,
+    description: `${description} Read this original ${screenplay.genre || 'short film'} screenplay by ${screenplay.creatorName} on CinemaPlot.`,
+    url: `/screenplays/${screenplay.id}`,
+    type: 'article',
+    keywords,
+  });
+}
+
 export function generateEventStructuredData(event: Event) {
   return {
     '@context': 'https://schema.org',
@@ -176,6 +200,48 @@ export function generateMovieStructuredData(movie: Movie) {
     ...(movie.awards && movie.awards.length > 0 && {
       award: movie.awards,
     }),
+  };
+}
+
+export function generateScreenplayStructuredData(screenplay: Screenplay) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CreativeWork',
+    '@subType': 'Screenplay',
+    name: screenplay.title,
+    description: screenplay.synopsis,
+    author: {
+      '@type': 'Person',
+      name: screenplay.creatorName,
+    },
+    url: `${baseUrl}/screenplays/${screenplay.id}`,
+    contentUrl: screenplay.fileUrl,
+    genre: screenplay.genre || 'Short Film',
+    ...(screenplay.pageCount && { numberOfPages: screenplay.pageCount }),
+    ...(screenplay.averageRating && {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: screenplay.averageRating,
+        ratingCount: screenplay.ratingCount || 1,
+        bestRating: 5,
+        worstRating: 1,
+      },
+    }),
+    ...(screenplay.tags && screenplay.tags.length > 0 && {
+      keywords: screenplay.tags.join(', '),
+    }),
+    interactionStatistic: [
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/CommentAction',
+        userInteractionCount: screenplay.totalComments || 0,
+      },
+      {
+        '@type': 'InteractionCounter',
+        interactionType: 'https://schema.org/ViewAction',
+        userInteractionCount: screenplay.viewCount || 0,
+      },
+    ],
   };
 }
 

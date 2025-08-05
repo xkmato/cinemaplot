@@ -71,3 +71,102 @@ export interface Comment {
   content: string;
   createdAt: string; // ISO string
 }
+
+export interface Screenplay {
+    id: string;
+    title: string;
+    description: string;
+    author: string;
+    authorId: string;
+    creatorName?: string;
+    logLine?: string;
+    synopsis?: string;
+    genre?: string;
+    tags?: string[];
+    rating?: number;
+    ratingCount?: number;
+    averageRating?: number;
+    totalDownloads?: number;
+    totalComments?: number;
+    viewCount?: number;
+    fileUrl: string;
+    fileSize: number;
+    pageCount?: number;
+    createdAt: string;
+    updatedAt: string;
+    
+    // Status properties
+    deleted?: boolean;
+    paused?: boolean;
+    
+    // Processing status for server-side PDF processing
+    isProcessed?: boolean;
+    processingStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+    processingError?: string;
+    processedAt?: string;
+    processingAttempts?: number;
+    maxRetryAttempts?: number;
+    processingProgress?: number; // 0-100 percentage
+    
+    // Processed content for interactive viewing
+    content?: ScreenplayPage[];
+}
+
+export interface ScreenplayPage {
+  pageNumber: number;
+  content: ScreenplayElement[];
+}
+
+export interface ScreenplayElement {
+  id: string; // Unique identifier for the element
+  type: 'scene_heading' | 'action' | 'character' | 'dialogue' | 'parenthetical' | 'transition' | 'general';
+  text: string;
+  lineNumber: number; // Line number within the page
+  startIndex: number; // Character start index in the full text
+  endIndex: number; // Character end index in the full text
+}
+
+export interface ScreenplayHighlight {
+  id: string;
+  screenplayId: string;
+  userId: string;
+  userName: string;
+  pageNumber: number;
+  elementIds: string[]; // Array of element IDs that are highlighted
+  startIndex: number; // Start character index within the selection
+  endIndex: number; // End character index within the selection
+  selectedText: string;
+  color: string; // Highlight color
+  note?: string; // Optional note attached to highlight
+  createdAt: string;
+}
+
+export interface ScreenplayComment {
+  id: string;
+  screenplayId: string;
+  pageNumber?: number; // Optional: specific page reference
+  elementId?: string; // Optional: specific element reference
+  highlightId?: string; // Optional: reference to a highlight
+  selectedText?: string; // Optional: quoted text from screenplay
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  content: string;
+  createdAt: string; // ISO string
+  parentId?: string; // For threaded comments/replies
+  isGeneral?: boolean; // True for general comments not tied to specific text
+}
+
+export interface ScreenplayDiscussion {
+  id: string;
+  screenplayId: string;
+  title: string;
+  description?: string;
+  creatorId: string;
+  creatorName: string;
+  createdAt: string;
+  isGeneral?: boolean; // General discussion vs. specific scene/page discussion
+  pageNumber?: number; // If tied to specific page
+  tags?: string[]; // Discussion tags like "character-development", "plot", "dialogue"
+  totalComments?: number;
+}

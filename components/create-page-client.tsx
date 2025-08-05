@@ -5,7 +5,7 @@ import GetUserNameModal from "@/components/get-user-name-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
-import { Calendar, Film, Play, Star, Users } from "lucide-react";
+import { Calendar, FileText, Film, Play, Star, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function CreatePageClient() {
@@ -41,6 +41,9 @@ export default function CreatePageClient() {
                             <Link href="/movies" className="text-sm font-medium hover:text-primary">
                                 Movies
                             </Link>
+                            <Link href="/screenplays" className="text-sm font-medium hover:text-primary">
+                                Screenplays
+                            </Link>
                         </nav>
                     </div>
                 </div>
@@ -54,12 +57,12 @@ export default function CreatePageClient() {
                             What Would You Like to Create?
                         </h1>
                         <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                            Share your events and movies with the world. Build a community around your content and connect with your audience.
+                            Share your events, movies, and screenplays with the world. Build a community around your content and connect with your audience.
                         </p>
                     </div>
 
                     {/* Create Options */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
                         {/* Create Event */}
                         <Card className="relative overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
                             <Link href="/events/create">
@@ -139,6 +142,48 @@ export default function CreatePageClient() {
                                     <Button className="w-full group-hover:bg-primary/90 transition-colors">
                                         <Film className="w-4 h-4 mr-2" />
                                         Share Movie
+                                    </Button>
+                                </CardContent>
+                            </Link>
+                        </Card>
+
+                        {/* Upload Screenplay */}
+                        <Card className="relative overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+                            <Link href="/screenplays/create">
+                                <CardHeader className="pb-4">
+                                    <div className="flex items-center space-x-3 mb-4">
+                                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                            <FileText className="w-6 h-6 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-xl">Upload Screenplay</CardTitle>
+                                            <CardDescription>Share your writing</CardDescription>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-muted-foreground mb-6">
+                                        Share your original screenplays with the community. Get feedback, discuss your work, and connect with other writers and filmmakers.
+                                    </p>
+
+                                    <div className="space-y-3 mb-6">
+                                        <div className="flex items-center space-x-2 text-sm">
+                                            <FileText className="w-4 h-4 text-muted-foreground" />
+                                            <span>Interactive reading experience</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2 text-sm">
+                                            <Star className="w-4 h-4 text-muted-foreground" />
+                                            <span>Get detailed feedback</span>
+                                        </div>
+                                        <div className="flex items-center space-x-2 text-sm">
+                                            <Users className="w-4 h-4 text-muted-foreground" />
+                                            <span>Join script discussions</span>
+                                        </div>
+                                    </div>
+
+                                    <Button className="w-full group-hover:bg-primary/90 transition-colors">
+                                        <FileText className="w-4 h-4 mr-2" />
+                                        Upload Screenplay
                                     </Button>
                                 </CardContent>
                             </Link>

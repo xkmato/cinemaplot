@@ -2,9 +2,20 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow read access to everyone
     match /{document=**} {
-      allow read: if true;                // Anyone can read
-      allow write: if request.auth != null; // Only authenticated users can write
+      allow read: if true;
+    }
+    
+    // Allow authenticated users to write
+    match /{document=**} {
+      allow write: if request.auth != null;
+    }
+    
+    // Allow server-side writes for processing (from Firebase Admin SDK)
+    // This rule allows writes when there's no auth context (server-side)
+    match /artifacts/{appId}/public/data/screenplays/{screenplayId} {
+      allow write: if request.auth == null || request.auth != null;
     }
   }
 }

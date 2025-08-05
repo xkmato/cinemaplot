@@ -3,6 +3,7 @@
 import AuthScreen from "@/components/auth-screen";
 import EventCard from "@/components/event-card";
 import GetUserNameModal from "@/components/get-user-name-modal";
+import ScreenplayCard from "@/components/screenplay-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +11,13 @@ import { useAppContext } from "@/lib/auth-context";
 import { isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { shouldUseUnoptimized } from "@/lib/utils";
-import { Calendar, Play, Star } from "lucide-react";
+import { Calendar, FileText, Play, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
 export default function HomePage() {
-  const { user, events, movies, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
+  const { user, events, movies, screenplays, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Get recent events for homepage (excluding events longer than a week)
@@ -28,11 +29,13 @@ export default function HomePage() {
   // Calculate real statistics
   const totalEvents = events.length;
   const totalMovies = movies.length;
+  const totalScreenplays = screenplays.length;
 
   // Calculate unique community members (creators + followers)
-  const uniqueCreatorIds = new Set([
+  const allCreatorIds = new Set([
     ...events.map(event => event.creatorId),
-    ...movies.map(movie => movie.creatorId)
+    ...movies.map(movie => movie.creatorId),
+    ...screenplays.map(screenplay => screenplay.authorId)
   ]);
 
   const uniqueFollowerIds = new Set(
@@ -40,7 +43,7 @@ export default function HomePage() {
   );
 
   // Combine creators and followers, removing duplicates
-  const allUniqueMembers = new Set([...uniqueCreatorIds, ...uniqueFollowerIds]);
+  const allUniqueMembers = new Set([...allCreatorIds, ...uniqueFollowerIds]);
   const totalCommunityMembers = allUniqueMembers.size;
 
   // Get featured movies (recent movies with good ratings, fallback to recent movies)
@@ -63,6 +66,30 @@ export default function HomePage() {
 
     // Otherwise, return the most recent movies
     return movies
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+  })();
+
+  // Get featured screenplays (recent screenplays with good ratings, fallback to recent screenplays)
+  const featuredScreenplays = (() => {
+    // First try to get screenplays with good ratings (4.0+)
+    const highRatedScreenplays = screenplays
+      .filter(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
+      .sort((a, b) => {
+        if (b.averageRating! !== a.averageRating!) {
+          return b.averageRating! - a.averageRating!;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, 3);
+
+    // If we have enough high-rated screenplays, return them
+    if (highRatedScreenplays.length >= 2) {
+      return highRatedScreenplays;
+    }
+
+    // Otherwise, return the most recent screenplays
+    return screenplays
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 3);
   })();
@@ -102,6 +129,9 @@ export default function HomePage() {
               <Link href="/movies" className="text-sm font-medium hover:text-primary">
                 Movies
               </Link>
+              <Link href="/screenplays" className="text-sm font-medium hover:text-primary">
+                Screenplays
+              </Link>
               <Link href="/create" className="text-sm font-medium hover:text-primary">
                 Create
               </Link>
@@ -139,18 +169,18 @@ export default function HomePage() {
         <div className="container mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Create, Share & Discover
-            <span className="block text-primary">Amazing Events & Films</span>
+            <span className="block text-primary">Amazing Events, Films & Screenplays</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Build a community around your events and movies. Connect with audiences, get followers, and make your
-            content discoverable.
+            Build a community around your events, movies, and screenplays. Connect with audiences, get followers,
+            and make your content discoverable.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8" asChild>
-              <Link href="/create">Add Event or Film</Link>
+              <Link href="/create">Add Event, Film, or Screenplay</Link>
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent" asChild>
-              <Link href="/discover">Explore Events and Films</Link>
+              <Link href="/discover">Explore Content</Link>
             </Button>
           </div>
         </div>
@@ -159,7 +189,7 @@ export default function HomePage() {
       {/* Stats Section */}
       <section className="py-16 bg-muted/50">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-3xl font-bold text-primary mb-2">{totalEvents}</div>
               <div className="text-muted-foreground">Events Created</div>
@@ -167,6 +197,10 @@ export default function HomePage() {
             <div>
               <div className="text-3xl font-bold text-primary mb-2">{totalMovies}</div>
               <div className="text-muted-foreground">Films Shared</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-primary mb-2">{totalScreenplays}</div>
+              <div className="text-muted-foreground">Screenplays</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-primary mb-2">{totalCommunityMembers || 0}</div>
@@ -270,6 +304,40 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Featured Screenplays */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">
+              {featuredScreenplays.some(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
+                ? 'Featured Screenplays'
+                : 'Recent Screenplays'}
+            </h2>
+            <Button variant="outline" asChild>
+              <Link href="/screenplays">View All Screenplays</Link>
+            </Button>
+          </div>
+          {featuredScreenplays.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredScreenplays.map((screenplay) => (
+                <ScreenplayCard key={screenplay.id} screenplay={screenplay} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-xl font-semibold mb-2">No Screenplays Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Be the first to share a screenplay and get feedback from the community!
+              </p>
+              <Button asChild>
+                <Link href="/screenplays/create">Upload Your First Screenplay</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20">
         <div className="container mx-auto px-4 text-center">
@@ -316,6 +384,11 @@ export default function HomePage() {
                 <li>
                   <Link href="/movies" className="hover:text-foreground">
                     Movies
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/screenplays" className="hover:text-foreground">
+                    Screenplays
                   </Link>
                 </li>
                 <li>
