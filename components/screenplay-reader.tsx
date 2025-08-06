@@ -11,6 +11,7 @@ import {
     BookOpen,
     ChevronLeft,
     ChevronRight,
+    Download,
     MessageCircle,
     RefreshCw,
     X
@@ -37,17 +38,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     const [commentText, setCommentText] = useState('');
     const [selectionPosition, setSelectionPosition] = useState<{ x: number, y: number } | null>(null);
     const [isRetrying, setIsRetrying] = useState(false);
-    const [viewMode, setViewMode] = useState<'reader' | 'pdf'>('reader'); // New state for view mode
     const pageRef = useRef<HTMLDivElement>(null);
-
-    // Helper function to format file size
-    const formatFileSize = (bytes: number) => {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
 
     // Handle text selection - moved to top level to avoid conditional hook
     const handleMouseUp = useCallback(() => {
@@ -297,34 +288,40 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                 elementClasses += " font-bold uppercase mb-4 mt-6";
                 elementStyle.marginLeft = '0';
                 elementStyle.fontSize = '12pt';
+                elementStyle.letterSpacing = '0.5px';
                 break;
             case 'action':
                 elementClasses += " text-gray-900 mb-3";
                 elementStyle.marginLeft = '0';
                 elementStyle.marginRight = '0';
                 elementStyle.fontSize = '12pt';
+                elementStyle.textAlign = 'left';
                 break;
             case 'character':
-                elementClasses += " font-bold uppercase mb-1 mt-4";
-                elementStyle.marginLeft = '3.7in'; // Standard character name position
+                elementClasses += " font-bold uppercase mb-1 mt-4 text-center";
+                elementStyle.marginLeft = '2.2in'; // Adjusted to align with new dialogue width
                 elementStyle.fontSize = '12pt';
+                elementStyle.letterSpacing = '1px';
                 break;
             case 'dialogue':
                 elementClasses += " mb-3";
-                elementStyle.marginLeft = '2.5in'; // Standard dialogue indent
-                elementStyle.marginRight = '2.5in'; // Standard dialogue right margin
+                elementStyle.marginLeft = '1.5in'; // Reduced from 2.5in for wider dialogue
+                elementStyle.marginRight = '1.5in'; // Reduced from 2.5in for wider dialogue
                 elementStyle.fontSize = '12pt';
+                elementStyle.textAlign = 'left';
                 break;
             case 'parenthetical':
                 elementClasses += " text-gray-600 italic mb-1";
-                elementStyle.marginLeft = '3.1in'; // Standard parenthetical position
-                elementStyle.marginRight = '3in';
+                elementStyle.marginLeft = '2.0in'; // Adjusted to center within dialogue area
+                elementStyle.marginRight = '2.0in';
                 elementStyle.fontSize = '12pt';
                 break;
             case 'transition':
-                elementClasses += " font-bold uppercase mt-4 mb-4 text-right";
+                elementClasses += " font-bold uppercase mt-4 mb-4";
                 elementStyle.marginLeft = '4in'; // Standard transition position
                 elementStyle.fontSize = '12pt';
+                elementStyle.textAlign = 'right';
+                elementStyle.letterSpacing = '0.5px';
                 break;
             case 'general':
                 elementClasses += " text-gray-900 mb-3";
@@ -339,7 +336,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
 
         return (
             <div
-                key={index}
+                key={`${currentPage}-${index}`}
                 className={elementClasses}
                 style={elementStyle}
                 data-element-index={index}
@@ -362,64 +359,41 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                             {screenplay.title}
                         </CardTitle>
                         <div className="flex items-center space-x-2">
-                            {/* View Mode Toggle */}
-                            <div className="flex items-center border rounded-lg p-1 bg-gray-50">
-                                <Button
-                                    size="sm"
-                                    variant={viewMode === 'reader' ? 'default' : 'ghost'}
-                                    onClick={() => {
-                                        setViewMode('reader');
-                                        setSelectedText(null);
-                                        setSelectionPosition(null);
-                                    }}
-                                    className="h-7 px-3 text-xs"
-                                >
-                                    Reader
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant={viewMode === 'pdf' ? 'default' : 'ghost'}
-                                    onClick={() => {
-                                        setViewMode('pdf');
-                                        setSelectedText(null);
-                                        setSelectionPosition(null);
-                                    }}
-                                    className="h-7 px-3 text-xs"
-                                >
-                                    PDF
-                                </Button>
-                            </div>
-
-                            {viewMode === 'reader' && (
-                                <>
-                                    <Badge variant="outline" className="text-xs">
-                                        PDF Page {currentPage + 1} of {totalPages}
-                                    </Badge>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={goToPreviousPage}
-                                        disabled={currentPage === 0}
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={goToNextPage}
-                                        disabled={currentPage === totalPages - 1}
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </Button>
-                                </>
-                            )}
+                            <Badge variant="outline" className="text-xs">
+                                Page {currentPage + 1} of {totalPages}
+                            </Badge>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={goToPreviousPage}
+                                disabled={currentPage === 0}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages - 1}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(screenplay.fileUrl, '_blank')}
+                                className="flex items-center"
+                            >
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                            </Button>
                         </div>
                     </div>
                 </CardHeader>
             </Card>
 
-            {/* Selection Actions - Popup over selected text (only in reader mode) */}
-            {selectedText && user && selectionPosition && viewMode === 'reader' && permissions?.canComment && (
+            {/* Selection Actions - Popup over selected text */}
+            {selectedText && user && selectionPosition && permissions?.canComment && (
                 <div
                     className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
                     style={{
@@ -453,80 +427,46 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             )}
 
             {/* Screenplay Content */}
-            {viewMode === 'reader' ? (
-                /* Interactive Reader View */
-                <Card className="overflow-x-auto">
-                    <CardContent className="p-0">
-                        <div
-                            ref={pageRef}
-                            className="screenplay-page font-mono text-sm leading-relaxed select-text bg-white"
-                            onMouseUp={handleMouseUp}
-                            style={{
-                                minHeight: '800px',
-                                fontFamily: 'Courier New, Courier, monospace',
-                                fontSize: '12pt',
-                                lineHeight: '1.5',
-                                maxWidth: '8.5in', // Standard screenplay page width
-                                margin: '0 auto',
-                                padding: '1in 1in 1in 1.5in', // Standard screenplay margins
-                                color: '#000000'
-                            }}
-                        >
-                            {/* Page Header */}
-                            <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200 text-xs text-gray-400">
-                                <span className="uppercase font-mono">
-                                    {screenplay.title}
+            <Card className="overflow-x-auto">
+                <CardContent className="p-0">
+                    <div
+                        ref={pageRef}
+                        className="screenplay-page font-mono text-sm leading-relaxed select-text bg-white"
+                        onMouseUp={handleMouseUp}
+                        style={{
+                            minHeight: '800px',
+                            fontFamily: 'Courier New, Courier, monospace',
+                            fontSize: '12pt',
+                            lineHeight: '1.5',
+                            maxWidth: '8.5in', // Standard screenplay page width
+                            margin: '0 auto',
+                            padding: '1in 1in 1in 1.5in', // Standard screenplay margins
+                            color: '#000000'
+                        }}
+                    >
+                        {/* Page Header */}
+                        <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200 text-xs text-gray-400">
+                            <span className="uppercase font-mono">
+                                {screenplay.title}
+                            </span>
+                            <div className="flex items-center space-x-4">
+                                <span className="font-medium">
+                                    Page {currentPage + 1}
                                 </span>
-                                <div className="flex items-center space-x-4">
-                                    <span>
-                                        Original PDF Page
-                                    </span>
-                                    <span className="font-medium">
-                                        Page {currentPage + 1}
-                                    </span>
-                                </div>
                             </div>
+                        </div>
 
-                            {/* Page Elements */}
-                            {currentPageData?.content?.map((element: ScreenplayElement, index: number) =>
-                                renderElement(element, index)
-                            ) || (
-                                    <div className="text-center text-gray-500 py-8">
-                                        <p>No content available for this page.</p>
-                                    </div>
-                                )}
-                        </div>
-                    </CardContent>
-                </Card>
-            ) : (
-                /* PDF View */
-                <Card>
-                    <CardContent className="p-4">
-                        <div className="space-y-4">
-                            <div className="text-sm text-muted-foreground">
-                                Viewing original PDF. You can switch back to the interactive reader for commenting and better formatting.
-                            </div>
-                            <div className="w-full h-[800px] border rounded-lg overflow-hidden bg-gray-50">
-                                <iframe
-                                    src={`${screenplay.fileUrl}#toolbar=1&view=FitH`}
-                                    className="w-full h-full"
-                                    title={screenplay.title}
-                                />
-                            </div>
-                            <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                <span>File size: {screenplay.fileSize ? formatFileSize(screenplay.fileSize) : 'Unknown'}</span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(screenplay.fileUrl, '_blank')}
-                                >
-                                    Open in New Tab
-                                </Button>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
+                        {/* Page Elements */}
+                        {currentPageData?.content?.map((element: ScreenplayElement, index: number) =>
+                            renderElement(element, index)
+                        ) || (
+                                <div className="text-center text-gray-500 py-8">
+                                    <p>No content available for this page.</p>
+                                </div>
+                            )}
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Comment Modal */}
             {showCommentModal && (

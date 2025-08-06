@@ -41,7 +41,7 @@ declare module 'screenplay-js' {
     tokens?: IToken[];
   }
 
-  // FountainParser is a singleton instance, not a class
+  // FountainParser is a singleton instance with parse method
   interface FountainParserInstance {
     parse(script: string, options?: Partial<IParserOptions>): IScriptJSON;
     paginate(script_html: string[], lpp?: string): {
@@ -51,6 +51,6 @@ declare module 'screenplay-js' {
     lexer(s: string): string | undefined | null;
   }
 
-  const FountainParser: FountainParserInstance;
-  export { FountainParser };
+  // Export the singleton instance
+  export const FountainParser: FountainParserInstance;
 }
