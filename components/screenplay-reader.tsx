@@ -151,7 +151,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                             <>
                                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
                                 <p className="text-gray-600 mb-4">
-                                    Processing PDF content for interactive reading...
+                                    Processing screenplay content for interactive reading...
                                 </p>
                                 {/* Progress Bar */}
                                 <div className="w-full max-w-md mx-auto">
@@ -202,7 +202,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                                 </div>
 
                                 <p className="text-sm text-gray-600">
-                                    You can still view the original PDF while we work on processing.
+                                    You can still view the original file while we work on processing.
                                 </p>
                             </>
                         ) : (

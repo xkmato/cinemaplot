@@ -292,8 +292,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         if (!user) throw new Error('User must be authenticated to create screenplays');
 
         // Validate file type and size
-        if (pdfFile.type !== 'application/pdf') {
-            throw new Error('Only PDF files are allowed for screenplays');
+        if (pdfFile.type !== 'text/plain' && !pdfFile.name.toLowerCase().endsWith('.fountain')) {
+            throw new Error('Only Fountain (.fountain) files are allowed for screenplays');
         }
 
         const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
@@ -302,11 +302,11 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
 
         // Upload PDF file to Firebase Storage
-        const pdfRef = ref(
+        const fountainRef = ref(
             storage,
-            `screenplay-pdfs/${appId}/${pdfFile.name}-${Date.now()}.pdf`
+            `screenplay-fountain/${appId}/${pdfFile.name}-${Date.now()}.fountain`
         );
-        const snapshot = await uploadBytes(pdfRef, pdfFile);
+        const snapshot = await uploadBytes(fountainRef, pdfFile);
         const fileUrl = await getDownloadURL(snapshot.ref);
 
         // Create initial screenplay document with processing status and privacy settings
@@ -346,8 +346,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             completeScreenplayData
         );
 
-        // Process PDF in the background
-        processScreenplayPDFAsync(docRef.id, fileUrl);
+        // Process Fountain in the background
+        processScreenplayFountainAsync(docRef.id, fileUrl);
 
         // Success
         if (analytics) {
@@ -399,8 +399,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
     };
 
-    // Background PDF processing function - calls server API
-    const processScreenplayPDFAsync = async (screenplayId: string, fileUrl: string) => {
+    // Background Fountain processing function - calls server API
+    const processScreenplayFountainAsync = async (screenplayId: string, fileUrl: string) => {
         const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
 
         try {
@@ -500,7 +500,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             });
 
             // Retry processing
-            await processScreenplayPDFAsync(screenplayId, screenplayData.fileUrl);
+            await processScreenplayFountainAsync(screenplayId, screenplayData.fileUrl);
 
         } catch (error) {
             console.error('Error retrying screenplay processing:', error);

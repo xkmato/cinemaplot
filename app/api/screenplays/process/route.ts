@@ -23,28 +23,29 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // For development, skip Firebase Admin updates and just process the PDF
+        // For development, skip Firebase Admin updates and just process the Fountain file
         // Client will handle progress updates through the regular Firebase client SDK
         
-        // Download PDF and process it
+        // Download Fountain and process it
         const response = await fetch(fileUrl);
         if (!response.ok) {
-            throw new Error(`Failed to download PDF: ${response.statusText}`);
+            throw new Error(`Failed to download Fountain: ${response.statusText}`);
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
+        const fileContent = buffer.toString('utf-8');
         
         // Dynamically import the processor to avoid build-time issues
-        const { processScreenplayPDF } = await import('@/lib/screenplay-processor');
+        const { processScreenplayFountain } = await import('@/lib/screenplay-processor');
         
-        const processedContent = await processScreenplayPDF(buffer);
+        const processedContent = await processScreenplayFountain(fileContent);
 
         return NextResponse.json({
             success: true,
-            pageCount: processedContent.totalPageCount,
-            content: processedContent.pages, // Now returns ScreenplayPage[] instead of string[]
-            message: `Screenplay processed successfully - ${processedContent.totalPageCount} pages extracted with PDF page consistency maintained`
+            pageCount: processedContent.pages.length,
+            content: processedContent.pages, // Returns ScreenplayPage[] with structured elements
+            message: `Screenplay processed successfully - ${processedContent.pages.length} pages extracted from Fountain file`
         });
 
     } catch (error) {

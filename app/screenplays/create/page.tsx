@@ -38,8 +38,8 @@ export default function CreateScreenplayPage() {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.type !== 'application/pdf') {
-                setError("Only PDF files are allowed for screenplays");
+            if (file.type !== 'text/plain' && !file.name.toLowerCase().endsWith('.fountain')) {
+                setError("Only Fountain (.fountain) files are allowed for screenplays");
                 return;
             }
 
@@ -58,7 +58,7 @@ export default function CreateScreenplayPage() {
         e.preventDefault();
 
         if (!title || !logLine || !synopsis || !genre || !pdfFile) {
-            setError("Please fill in all required fields and upload a PDF file.");
+            setError("Please fill in all required fields and upload a Fountain file.");
             return;
         }
 
@@ -257,22 +257,31 @@ export default function CreateScreenplayPage() {
 
                                 {/* PDF Upload */}
                                 <div className="space-y-3">
-                                    <Label htmlFor="pdf" className="text-base font-semibold text-foreground flex items-center space-x-1">
-                                        <span>📄 Screenplay PDF</span>
+                                    <Label htmlFor="fdx" className="text-base font-semibold text-foreground flex items-center space-x-1">
+                                        <span>📄 Screenplay File</span>
                                         <span className="text-destructive">*</span>
                                     </Label>
                                     <div className="relative">
                                         <Input
-                                            id="pdf"
+                                            id="fountain"
                                             type="file"
-                                            accept=".pdf"
+                                            accept=".fountain,.txt"
                                             onChange={handleFileChange}
                                             required
                                             className="h-12 text-base border-2 border-dashed border-primary/30 focus:border-primary/50 transition-all duration-200 bg-background/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
                                         />
                                     </div>
                                     <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/10">
-                                        💡 Upload your screenplay as a PDF. Maximum file size: 10MB. Page count will be automatically detected during processing. For best reading experience, use proper screenplay formatting.
+                                        💡 Upload your screenplay as a Fountain (.fountain) file. Maximum file size: 10MB.
+                                        <br /><br />
+                                        📝 <strong>Fountain format</strong> is a simple markup syntax for writing screenplays in plain text. Key elements:
+                                        <br />• Scene headings: INT. COFFEE SHOP - DAY
+                                        <br />• Character names: JOHN (all caps, centered)
+                                        <br />• Dialogue: Regular text below character names
+                                        <br />• Action: Regular paragraphs describing what happens
+                                        <br />• Parentheticals: (whispers) or (V.O.)
+                                        <br /><br />
+                                        Learn more at <a href="https://fountain.io" target="_blank" rel="noopener" className="text-primary hover:underline">fountain.io</a>
                                     </div>
                                     {pdfFile && (
                                         <div className="flex items-center space-x-2 text-sm text-muted-foreground bg-accent/20 p-3 rounded-lg">
