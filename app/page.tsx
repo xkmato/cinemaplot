@@ -11,7 +11,7 @@ import { useAppContext } from "@/lib/auth-context";
 import { isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { shouldUseUnoptimized } from "@/lib/utils";
-import { Calendar, FileText, Play, Star } from "lucide-react";
+import { Play, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -210,54 +210,41 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Events */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">
-              {recentEvents.length > 0 ? 'Upcoming Events' : 'Recent Events'}
-            </h2>
-            <Button variant="outline" asChild>
-              <Link href="/events">View All Events</Link>
-            </Button>
-          </div>
-          {recentEvents.length > 0 ? (
+      {/* Featured Events - Only show if there are events */}
+      {recentEvents.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Upcoming Events</h2>
+              <Button variant="outline" asChild>
+                <Link href="/events">View All Events</Link>
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentEvents.map((event) => (
                 <EventCard key={event.id} event={event} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No Events Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Be the first to create an event and start building your community!
-              </p>
-              <Button asChild>
-                <Link href="/create">Create First Event</Link>
+          </div>
+        </section>
+      )}
+
+      {/* Featured Movies - Only show if there are movies */}
+      {featuredMovies.length > 0 && (
+        <section className="py-16 bg-muted/50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">
+                {featuredMovies.some(movie => movie.averageRating && movie.averageRating >= 4.0)
+                  ? 'Featured Movies'
+                  : 'Recent Movies'}
+              </h2>
+              <Button variant="outline" asChild>
+                <Link href="/movies">View All Movies</Link>
               </Button>
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* Featured Movies */}
-      <section className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">
-              {featuredMovies.some(movie => movie.averageRating && movie.averageRating >= 4.0)
-                ? 'Featured Movies'
-                : 'Recent Movies'}
-            </h2>
-            <Button variant="outline" asChild>
-              <Link href="/movies">View All Movies</Link>
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredMovies.length > 0 ? (
-              featuredMovies.map((movie) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredMovies.map((movie) => (
                 <Card key={movie.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                   <div className="relative">
                     <Image
@@ -287,56 +274,34 @@ export default function HomePage() {
                     </Button>
                   </CardContent>
                 </Card>
-              ))
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">No Featured Movies Yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Be the first to share a movie and start building your audience!
-                </p>
-                <Button asChild>
-                  <Link href="/movies/create">Share Your First Movie</Link>
-                </Button>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Featured Screenplays */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">
-              {featuredScreenplays.some(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
-                ? 'Featured Screenplays'
-                : 'Recent Screenplays'}
-            </h2>
-            <Button variant="outline" asChild>
-              <Link href="/screenplays">View All Screenplays</Link>
-            </Button>
-          </div>
-          {featuredScreenplays.length > 0 ? (
+      {/* Featured Screenplays - Only show if there are screenplays */}
+      {featuredScreenplays.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">
+                {featuredScreenplays.some(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
+                  ? 'Featured Screenplays'
+                  : 'Recent Screenplays'}
+              </h2>
+              <Button variant="outline" asChild>
+                <Link href="/screenplays">View All Screenplays</Link>
+              </Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredScreenplays.map((screenplay) => (
                 <ScreenplayCard key={screenplay.id} screenplay={screenplay} />
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No Screenplays Yet</h3>
-              <p className="text-muted-foreground mb-4">
-                Be the first to share a screenplay and get feedback from the community!
-              </p>
-              <Button asChild>
-                <Link href="/screenplays/create">Upload Your First Screenplay</Link>
-              </Button>
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-20">
