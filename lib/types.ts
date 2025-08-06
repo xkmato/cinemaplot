@@ -72,6 +72,29 @@ export interface Comment {
   createdAt: string; // ISO string
 }
 
+export interface ScreenplayInvitation {
+  id: string;
+  screenplayId: string;
+  invitedBy: string; // User ID of the person who sent the invitation
+  invitedByName: string;
+  invitedEmail: string;
+  invitedUserId?: string; // If the invited person already has an account
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  permissions: ScreenplayPermissions;
+  createdAt: string;
+  expiresAt?: string;
+  message?: string; // Optional personal message
+}
+
+export interface ScreenplayPermissions {
+  canRead: boolean;
+  canComment: boolean;
+  canHighlight: boolean;
+  canDownload: boolean;
+  canInvite: boolean; // Can invite other collaborators
+  canEdit?: boolean; // Future: editing permissions
+}
+
 export interface Screenplay {
     id: string;
     title: string;
@@ -98,6 +121,14 @@ export interface Screenplay {
     // Status properties
     deleted?: boolean;
     paused?: boolean;
+    
+    // Privacy and collaboration settings
+    isPublic?: boolean; // Default false - private by default
+    visibility?: 'private' | 'public' | 'collaborators'; // More explicit visibility control
+    collaborators?: string[]; // Array of user IDs who have access
+    collaboratorEmails?: string[]; // Array of email addresses for pending invitations
+    invitedCollaborators?: ScreenplayInvitation[]; // Pending invitations
+    permissions?: ScreenplayPermissions; // Fine-grained permissions
     
     // Processing status for server-side PDF processing
     isProcessed?: boolean;

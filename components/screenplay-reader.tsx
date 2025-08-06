@@ -30,7 +30,7 @@ interface Selection {
 }
 
 export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) {
-    const { user, submitScreenplayComment, retryScreenplayProcessing } = useAppContext();
+    const { user, submitScreenplayComment, retryScreenplayProcessing, hasScreenplayAccess, getScreenplayPermissions } = useAppContext();
     const [currentPage, setCurrentPage] = useState(0);
     const [selectedText, setSelectedText] = useState<Selection | null>(null);
     const [showCommentModal, setShowCommentModal] = useState(false);
@@ -94,6 +94,39 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             setIsRetrying(false);
         }
     };
+
+    // Check if user has access to this screenplay
+    if (!hasScreenplayAccess(screenplay)) {
+        return (
+            <Card className="max-w-4xl mx-auto">
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <BookOpen className="w-6 h-6 mr-2" />
+                        Access Denied
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-center py-8">
+                        <div className="text-red-600 mb-4">
+                            <X className="w-12 h-12 mx-auto mb-2" />
+                            <p className="font-medium mb-2">Private Screenplay</p>
+                            <p className="text-sm text-gray-600 mb-4">
+                                This screenplay is private and you don&apos;t have permission to view it.
+                            </p>
+                        </div>
+                        {!user && (
+                            <p className="text-sm text-gray-600">
+                                Please sign in to access this screenplay if you have been granted permission.
+                            </p>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    // Get user's permissions for this screenplay
+    const permissions = getScreenplayPermissions(screenplay);
 
     // Check if screenplay has processed content
     if (!screenplay.content || screenplay.content.length === 0) {
@@ -386,7 +419,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             </Card>
 
             {/* Selection Actions - Popup over selected text (only in reader mode) */}
-            {selectedText && user && selectionPosition && viewMode === 'reader' && (
+            {selectedText && user && selectionPosition && viewMode === 'reader' && permissions?.canComment && (
                 <div
                     className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
                     style={{

@@ -1,5 +1,6 @@
 'use client';
 
+import ScreenplayPrivacyManager from "@/components/screenplay-privacy-manager";
 import ScreenplayReader from "@/components/screenplay-reader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { Screenplay, ScreenplayComment } from "@/lib/types";
-import { FileText, MessageCircle, RefreshCw, Share2, Star, User } from "lucide-react";
+import { FileText, Globe, Lock, MessageCircle, RefreshCw, Settings, Share2, Star, User } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -27,6 +28,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
     const [showQuoteComment, setShowQuoteComment] = useState(false);
     const [quoteComment, setQuoteComment] = useState("");
     const [isRetrying, setIsRetrying] = useState(false);
+    const [showPrivacyManager, setShowPrivacyManager] = useState(false);
 
     useEffect(() => {
         const foundScreenplay = screenplays.find(s => s.id === screenplayId);
@@ -137,6 +139,12 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                             ← Back to Screenplays
                         </Link>
                         <div className="flex items-center space-x-2">
+                            {screenplay.authorId === user?.uid && (
+                                <Button variant="outline" size="sm" onClick={() => setShowPrivacyManager(true)}>
+                                    <Settings className="w-4 h-4 mr-2" />
+                                    Privacy
+                                </Button>
+                            )}
                             <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                 <Share2 className="w-4 h-4 mr-2" />
                                 Share
@@ -153,7 +161,18 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                         <div className="lg:col-span-2 space-y-6">
                             {/* Screenplay Info */}
                             <div>
-                                <h1 className="text-3xl md:text-4xl font-bold mb-4">{screenplay.title}</h1>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <h1 className="text-3xl md:text-4xl font-bold">{screenplay.title}</h1>
+                                    {screenplay.visibility && (
+                                        <Badge variant={screenplay.visibility === 'public' ? 'default' : 'secondary'}>
+                                            {screenplay.visibility === 'public' && <Globe className="w-3 h-3 mr-1" />}
+                                            {screenplay.visibility === 'private' && <Lock className="w-3 h-3 mr-1" />}
+                                            {screenplay.visibility === 'collaborators' && <User className="w-3 h-3 mr-1" />}
+                                            {screenplay.visibility === 'public' ? 'Public' :
+                                                screenplay.visibility === 'collaborators' ? 'Collaborators Only' : 'Private'}
+                                        </Badge>
+                                    )}
+                                </div>
                                 <p className="text-lg text-muted-foreground mb-4">{screenplay.logLine}</p>
                                 <div className="flex items-center space-x-4 mb-6">
                                     <Badge>{screenplay.genre}</Badge>
@@ -462,6 +481,18 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                     </div>
                 </div>
             </div>
+
+            {/* Privacy Manager Modal */}
+            {showPrivacyManager && screenplay && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-background rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                        <ScreenplayPrivacyManager
+                            screenplay={screenplay}
+                            onClose={() => setShowPrivacyManager(false)}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Share Modal */}
             {showShareModal && (

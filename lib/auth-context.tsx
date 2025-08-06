@@ -27,7 +27,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
-import { Comment, Event, Movie, Review, Screenplay, ScreenplayComment, ScreenplayHighlight, User } from "./types";
+import { Comment, Event, Movie, Review, Screenplay, ScreenplayComment, ScreenplayHighlight, ScreenplayPermissions, User } from "./types";
 
 interface AuthMessage {
     type: 'success' | 'error';
@@ -69,6 +69,13 @@ interface AppContextType {
     addScreenplayHighlight: (screenplayId: string, highlight: ScreenplayHighlight) => Promise<void>;
     retryScreenplayProcessing: (screenplayId: string) => Promise<void>;
     getScreenplayComments: (screenplayId: string) => ScreenplayComment[];
+    // Privacy and collaboration functions
+    updateScreenplayPrivacy: (screenplayId: string, visibility: 'private' | 'public' | 'collaborators') => Promise<void>;
+    inviteCollaborator: (screenplayId: string, email: string, permissions: ScreenplayPermissions, message?: string) => Promise<void>;
+    removeCollaborator: (screenplayId: string, userId: string) => Promise<void>;
+    updateCollaboratorPermissions: (screenplayId: string, userId: string, permissions: ScreenplayPermissions) => Promise<void>;
+    hasScreenplayAccess: (screenplay: Screenplay) => boolean;
+    getScreenplayPermissions: (screenplay: Screenplay) => ScreenplayPermissions | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -302,15 +309,16 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const snapshot = await uploadBytes(pdfRef, pdfFile);
         const fileUrl = await getDownloadURL(snapshot.ref);
 
-        // Create initial screenplay document with processing status
+        // Create initial screenplay document with processing status and privacy settings
         const completeScreenplayData = {
             ...screenplayData,
             fileUrl,
             fileName: pdfFile.name,
             fileSize: pdfFile.size,
-            creatorId: user.uid,
+            authorId: user.uid,
             creatorName: user.displayName || 'Unknown',
             createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             viewCount: 0,
             totalComments: 0,
             isProcessed: false,
@@ -318,6 +326,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             processingAttempts: 0,
             maxRetryAttempts: 3,
             processingProgress: 0,
+            // Privacy settings - private by default
+            isPublic: false,
+            visibility: 'private' as const,
+            collaborators: [],
+            collaboratorEmails: [],
+            invitedCollaborators: [],
+            permissions: {
+                canRead: true,
+                canComment: true,
+                canHighlight: true,
+                canDownload: false,
+                canInvite: false
+            }
         };
 
         const docRef = await addDoc(
@@ -674,6 +695,137 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     };
 
+    // Privacy and collaboration functions
+    const updateScreenplayPrivacy = async (screenplayId: string, visibility: 'private' | 'public' | 'collaborators') => {
+        if (!user) throw new Error('User must be authenticated to update screenplay privacy');
+
+        const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
+        const screenplay = screenplays.find(s => s.id === screenplayId);
+
+        if (!screenplay || screenplay.authorId !== user.uid) {
+            throw new Error('You do not have permission to modify this screenplay');
+        }
+
+        await updateDoc(screenplayDocRef, {
+            visibility,
+            isPublic: visibility === 'public',
+            updatedAt: new Date().toISOString()
+        });
+    };
+
+    const inviteCollaborator = async (screenplayId: string, email: string, permissions: ScreenplayPermissions, message?: string) => {
+        if (!user) throw new Error('User must be authenticated to invite collaborators');
+
+        const screenplay = screenplays.find(s => s.id === screenplayId);
+        if (!screenplay || screenplay.authorId !== user.uid) {
+            throw new Error('You do not have permission to invite collaborators to this screenplay');
+        }
+
+        // Check if email is already invited or already a collaborator
+        if (screenplay.collaboratorEmails?.includes(email)) {
+            throw new Error('This email has already been invited');
+        }
+
+        // Create invitation
+        const invitation = {
+            id: Date.now().toString(),
+            screenplayId,
+            invitedBy: user.uid,
+            invitedByName: user.displayName || 'Unknown',
+            invitedEmail: email,
+            status: 'pending' as const,
+            permissions,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // Expires in 7 days
+            message
+        };
+
+        const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
+        await updateDoc(screenplayDocRef, {
+            collaboratorEmails: arrayUnion(email),
+            invitedCollaborators: arrayUnion(invitation),
+            updatedAt: new Date().toISOString()
+        });
+
+        // TODO: Send email notification to the invited user
+        console.log(`Invitation sent to ${email} for screenplay ${screenplay.title}`);
+    };
+
+    const removeCollaborator = async (screenplayId: string, userId: string) => {
+        if (!user) throw new Error('User must be authenticated to remove collaborators');
+
+        const screenplay = screenplays.find(s => s.id === screenplayId);
+        if (!screenplay || screenplay.authorId !== user.uid) {
+            throw new Error('You do not have permission to modify collaborators for this screenplay');
+        }
+
+        const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
+        await updateDoc(screenplayDocRef, {
+            collaborators: arrayRemove(userId),
+            updatedAt: new Date().toISOString()
+        });
+    };
+
+    const updateCollaboratorPermissions = async (screenplayId: string, userId: string, permissions: ScreenplayPermissions) => {
+        if (!user) throw new Error('User must be authenticated to update permissions');
+
+        const screenplay = screenplays.find(s => s.id === screenplayId);
+        if (!screenplay || screenplay.authorId !== user.uid) {
+            throw new Error('You do not have permission to modify permissions for this screenplay');
+        }
+
+        // TODO: Implement per-user permissions (would require a more complex data structure)
+        // For now, this updates the default permissions for all collaborators
+        const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
+        await updateDoc(screenplayDocRef, {
+            permissions,
+            updatedAt: new Date().toISOString()
+        });
+    };
+
+    const hasScreenplayAccess = (screenplay: Screenplay): boolean => {
+        if (!user) return screenplay.isPublic || screenplay.visibility === 'public';
+
+        // Owner always has access
+        if (screenplay.authorId === user.uid) return true;
+
+        // Public screenplays are accessible to everyone
+        if (screenplay.isPublic || screenplay.visibility === 'public') return true;
+
+        // Check if user is a collaborator
+        if (screenplay.collaborators?.includes(user.uid)) return true;
+
+        // Check if user was invited by email
+        if (screenplay.collaboratorEmails?.includes(user.email || '')) return true;
+
+        return false;
+    };
+
+    const getScreenplayPermissions = (screenplay: Screenplay): ScreenplayPermissions | null => {
+        if (!user || !hasScreenplayAccess(screenplay)) return null;
+
+        // Owner has full permissions
+        if (screenplay.authorId === user.uid) {
+            return {
+                canRead: true,
+                canComment: true,
+                canHighlight: true,
+                canDownload: true,
+                canInvite: true,
+                canEdit: true
+            };
+        }
+
+        // Use the screenplay's default permissions for collaborators
+        return screenplay.permissions || {
+            canRead: true,
+            canComment: true,
+            canHighlight: true,
+            canDownload: false,
+            canInvite: false
+        };
+    };
+
     // Check for magic link on component mount
     useEffect(() => {
         const processMagicLink = async () => {
@@ -874,7 +1026,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                         // Hide paused screenplays for everyone except the owner
                         if (screenplay.paused && (!user || user.uid !== screenplay.authorId))
                             return false;
-                        return true;
+
+                        // Privacy filtering
+                        if (!user) {
+                            // For unauthenticated users, only show public screenplays
+                            return screenplay.isPublic || screenplay.visibility === 'public';
+                        }
+
+                        // Owner can always see their own screenplays
+                        if (screenplay.authorId === user.uid) return true;
+
+                        // Public screenplays are visible to everyone
+                        if (screenplay.isPublic || screenplay.visibility === 'public') return true;
+
+                        // Check if user is a collaborator
+                        if (screenplay.collaborators?.includes(user.uid)) return true;
+
+                        // Check if user was invited by email
+                        if (screenplay.collaboratorEmails?.includes(user.email || '')) return true;
+
+                        // Default: hide private screenplays
+                        return false;
                     });
                 setScreenplays(screenplaysData);
             },
@@ -963,6 +1135,12 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         addScreenplayComment,
         addScreenplayHighlight,
         retryScreenplayProcessing,
+        updateScreenplayPrivacy,
+        inviteCollaborator,
+        removeCollaborator,
+        updateCollaboratorPermissions,
+        hasScreenplayAccess,
+        getScreenplayPermissions,
     };
 
     return (
