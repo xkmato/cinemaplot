@@ -1,20 +1,17 @@
-# Cinema Plot - Film Events Calendar
+# Cinema Plot - Film Events & Film Projects Platform
 
-Cinema Plot is a modern, open-source event management platform specifically designed for the Ugandan film industry. Built with Next.js and powered by Firebase, it provides a simple, intuitive way for filmmakers, industry professionals, and enthusiasts to create, share, and discover film-related events across Uganda.
+Cinema Plot is a modern, open-source platform for Uganda's film industry. Built with Next.js and powered by Firebase, it provides a simple, intuitive way for filmmakers, industry professionals, and enthusiasts to create, share, and discover film-related events, movies, screenplays, and discussions across Uganda.
 
 ## Features
 
-### 🎬 Event Management
+### 🎬 Movie & Screenplay Management
 
-- **Create Events**: Easily create film events with details like title, description, date, time, location, and images
-- **Multi-day Events**: Support for events spanning multiple days (festivals, workshops, etc.)
-- **Event Categories**: Perfect for movie premieres, casting calls, filmmaker meetups, and industry talks
-
-### 📅 Calendar Views
-
-- **Week View**: See all events for the current week at a glance
-- **Day View**: Focus on a specific day's events
-- **Responsive Design**: Optimized for both desktop and mobile viewing
+- **Add Your Movie**: List your film, add details, images, and trailers.
+- **Movie Discussions**: Create and join discussions around any listed movie.
+- **Movie Reviews**: Review and rate available movies.
+- **Add Your Screenplay**: Upload and manage screenplays, including TV/web series.
+- **Screenplay Discussions**: Discuss and collaborate on screenplays.
+- **Event Types**: Host movie premieres (with trailer support), casting calls, filmmaker meetups, and industry talks.
 
 ### 🔔 Smart Notifications
 
@@ -328,14 +325,24 @@ For questions, suggestions, or support:
 
 ## Roadmap
 
+- [x] Add movies, movie discussions, and reviews
+- [x] Add screenplays and screenplay discussions
+- [x] Movie premiere events with trailer support
 - [ ] Advanced event filtering and search
-- [ ] User profiles and follow system
-- [ ] Event check-in and attendance tracking
-- [ ] Integration with popular calendar apps
-- [ ] Mobile app development
-- [ ] Multi-language support
-- [ ] Event analytics and insights
+
+### Coming Soon
+
+- [ ] User profiles
+- [ ] Verified professional film reviewers
+- [ ] Launch auditions from screenplays, including accepting audition tapes directly on the platform
+- [ ] Multiple screenplay projects (TV series, web series)
+
+### Coming Up Later
+
+- [ ] Crowd funding for projects based on clear budget
+- [ ] Support for monetary and non-monetary investment in projects
+- [ ] Fully featured distribution platform
 
 ---
 
-**Cinema Plot** - Connecting Uganda's film community, one event at a time. 🎬✨
+**Cinema Plot** - Connecting Uganda's film community, one event, one project at a time. 🎬✨
