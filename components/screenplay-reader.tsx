@@ -12,7 +12,9 @@ import {
     ChevronLeft,
     ChevronRight,
     Download,
+    Expand,
     MessageCircle,
+    Minimize,
     RefreshCw,
     X
 } from 'lucide-react';
@@ -38,6 +40,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     const [commentText, setCommentText] = useState('');
     const [selectionPosition, setSelectionPosition] = useState<{ x: number, y: number } | null>(null);
     const [isRetrying, setIsRetrying] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const pageRef = useRef<HTMLDivElement>(null);
 
     // Handle text selection - moved to top level to avoid conditional hook
@@ -85,6 +88,29 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             setIsRetrying(false);
         }
     };
+
+    // Handle fullscreen toggle
+    const handleFullscreenToggle = () => {
+        setIsFullscreen(!isFullscreen);
+    };
+
+    // Handle keyboard shortcuts
+    React.useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // F11 for fullscreen toggle
+            if (event.key === 'F11') {
+                event.preventDefault();
+                setIsFullscreen(prev => !prev);
+            }
+            // Escape to exit fullscreen
+            if (event.key === 'Escape' && isFullscreen) {
+                setIsFullscreen(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isFullscreen]);
 
     // Check if user has access to this screenplay
     if (!hasScreenplayAccess(screenplay)) {
@@ -356,11 +382,17 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     return (
         <>
             <div
-                className="w-full mx-auto"
+                className={`w-full mx-auto ${isFullscreen ? 'fixed inset-0 z-50 bg-white overflow-auto' : ''}`}
                 style={{
-                    maxWidth: '1200px', // wider than before
+                    maxWidth: isFullscreen ? '100vw' : '1200px',
                     paddingLeft: 0,
                     paddingRight: 0
+                }}
+                onClick={(e) => {
+                    // Close fullscreen if clicking on the background (not the content)
+                    if (isFullscreen && e.target === e.currentTarget) {
+                        setIsFullscreen(false);
+                    }
                 }}
             >
                 {/* Reader Header */}
@@ -369,17 +401,26 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                         <div className="flex items-center justify-between">
                             <CardTitle className="flex items-center">
                                 <BookOpen className="w-6 h-6 mr-2" />
-                                {screenplay.title}
+                                <span className="truncate">{screenplay.title}</span>
+                                {isFullscreen && (
+                                    <Badge variant="secondary" className="ml-2 text-xs">
+                                        Fullscreen
+                                    </Badge>
+                                )}
                             </CardTitle>
-                            <div className="flex items-center space-x-2">
-                                <Badge variant="outline" className="text-xs">
+                            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
+                                <Badge variant="outline" className="text-xs hidden sm:inline-flex">
                                     Page {currentPage + 1} of {totalPages}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs sm:hidden">
+                                    {currentPage + 1}/{totalPages}
                                 </Badge>
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     onClick={goToPreviousPage}
                                     disabled={currentPage === 0}
+                                    className="px-2"
                                 >
                                     <ChevronLeft className="w-4 h-4" />
                                 </Button>
@@ -388,17 +429,37 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                                     size="sm"
                                     onClick={goToNextPage}
                                     disabled={currentPage === totalPages - 1}
+                                    className="px-2"
                                 >
                                     <ChevronRight className="w-4 h-4" />
                                 </Button>
                                 <Button
                                     variant="outline"
                                     size="sm"
+                                    onClick={handleFullscreenToggle}
+                                    className="px-2"
+                                    title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+                                >
+                                    {isFullscreen ? <Minimize className="w-4 h-4" /> : <Expand className="w-4 h-4" />}
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
                                     onClick={() => window.open(screenplay.fileUrl, '_blank')}
-                                    className="flex items-center"
+                                    className="hidden sm:flex items-center px-2"
                                 >
                                     <Download className="w-4 h-4 mr-1" />
-                                    Download
+                                    <span className="hidden md:inline">Download</span>
+                                </Button>
+                                {/* Mobile download button - icon only */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(screenplay.fileUrl, '_blank')}
+                                    className="sm:hidden px-2"
+                                    title="Download"
+                                >
+                                    <Download className="w-4 h-4" />
                                 </Button>
                             </div>
                         </div>
@@ -408,7 +469,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                 {/* Selection Actions - Popup over selected text */}
                 {selectedText && user && selectionPosition && permissions?.canComment && (
                     <div
-                        className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
+                        className={`fixed bg-white border border-gray-200 rounded-lg shadow-lg p-3 ${isFullscreen ? 'z-[55]' : 'z-50'}`}
                         style={{
                             left: `${selectionPosition.x}px`,
                             top: `${selectionPosition.y}px`,
@@ -447,14 +508,14 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                             className="screenplay-page font-mono text-sm leading-relaxed select-text bg-white"
                             onMouseUp={handleMouseUp}
                             style={{
-                                minHeight: '800px',
+                                minHeight: isFullscreen ? '80vh' : '800px',
                                 fontFamily: 'Courier New, Courier, monospace',
                                 fontSize: '12pt',
                                 lineHeight: '1.5',
                                 width: '100%',
                                 maxWidth: '100%',
                                 margin: 0,
-                                padding: '4vw 2vw', // Responsive padding
+                                padding: isFullscreen ? '2vw 4vw' : '4vw 2vw', // More padding in fullscreen
                                 color: '#000000',
                                 boxSizing: 'border-box'
                             }}
@@ -485,7 +546,7 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
 
                 {/* Comment Modal */}
                 {showCommentModal && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center ${isFullscreen ? 'z-[60]' : 'z-50'}`}>
                         <Card className="w-full max-w-md mx-4">
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">
@@ -550,16 +611,22 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             <style jsx>{`
                 @media (max-width: 900px) {
                     .screenplay-page {
-                        padding: 2vw 1vw !important;
+                        padding: ${isFullscreen ? '2vw 1vw' : '2vw 1vw'} !important;
                         font-size: 11pt !important;
                     }
                 }
                 @media (max-width: 600px) {
                     .screenplay-page {
-                        padding: 2vw 0.5vw !important;
+                        padding: ${isFullscreen ? '2vw 0.5vw' : '2vw 0.5vw'} !important;
                         font-size: 10pt !important;
                     }
                 }
+                /* Fullscreen specific styles */
+                ${isFullscreen ? `
+                    .screenplay-page {
+                        min-height: 90vh !important;
+                    }
+                ` : ''}
             `}</style>
         </>
     );
