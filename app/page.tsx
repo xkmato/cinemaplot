@@ -140,7 +140,7 @@ export default function HomePage() {
               {user ? (
                 <>
                   <span className="text-sm text-muted-foreground hidden sm:block">
-                    Welcome, <Link href={user?.uid ? `/profile/${user.uid}` : '#'} className="underline hover:text-primary">{user.displayName || 'User'}</Link>
+                    Welcome, <Link href={user?.username ? `/${user.username}` : (user?.uid ? `/profile/${user.uid}` : '#')} className="underline hover:text-primary">{user.displayName || 'User'}</Link>
                   </span>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     Sign Out

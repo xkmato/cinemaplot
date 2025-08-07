@@ -89,7 +89,7 @@ const FILM_ROLES = [
 ];
 
 export default function UserProfilePage() {
-    const { user, events, movies, screenplays } = useAppContext();
+    const { user, events, movies, screenplays, refreshUserProfile } = useAppContext();
     const routeParams = useParams();
     const profileUid = (routeParams as { uid?: string })?.uid || user?.uid;
     const isOwnProfile = user && user.uid === profileUid;
@@ -241,6 +241,11 @@ export default function UserProfilePage() {
             setEditingField(null);
             setTempValues({});
             setUsernameError("");
+
+            // Refresh user profile in auth context if username was updated
+            if (field === 'username') {
+                await refreshUserProfile();
+            }
         }
     };
 

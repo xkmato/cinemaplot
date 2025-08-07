@@ -76,6 +76,7 @@ interface AppContextType {
     updateCollaboratorPermissions: (screenplayId: string, userId: string, permissions: ScreenplayPermissions) => Promise<void>;
     hasScreenplayAccess: (screenplay: Screenplay) => boolean;
     getScreenplayPermissions: (screenplay: Screenplay) => ScreenplayPermissions | null;
+    refreshUserProfile: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -858,43 +859,84 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser: FirebaseUser | null) => {
             setIsLoading(true);
             if (currentUser) {
-                const userDocRef = doc(
-                    db,
-                    `artifacts/${appId}/public/data/users`,
-                    currentUser.uid
-                );
-                const docSnap = await getDoc(userDocRef);
+                try {
+                    // Add timeout to prevent hanging on slow Firestore operations
+                    const userDocRef = doc(
+                        db,
+                        `artifacts/${appId}/public/data/users`,
+                        currentUser.uid
+                    );
 
-                if (docSnap.exists()) {
-                    // User profile exists, merge with auth data
-                    setUser({
-                        uid: currentUser.uid,
-                        email: currentUser.email,
-                        displayName: docSnap.data()?.displayName || currentUser.displayName
-                    });
-                    setNeedsNameToProceed(false);
-                } else {
-                    // No profile. If they have a displayName (e.g., from Google), create one.
-                    if (currentUser.displayName) {
-                        await setDoc(userDocRef, {
-                            displayName: currentUser.displayName,
-                            email: currentUser.email,
-                        });
+                    // Use Promise.race to add a timeout
+                    const docSnap = await Promise.race([
+                        getDoc(userDocRef),
+                        new Promise<never>((_, reject) =>
+                            setTimeout(() => reject(new Error('Timeout loading user profile')), 10000)
+                        )
+                    ]);
+
+                    if (docSnap.exists()) {
+                        // User profile exists, merge with auth data
+                        const profileData = docSnap.data();
                         setUser({
                             uid: currentUser.uid,
                             email: currentUser.email,
-                            displayName: currentUser.displayName
+                            displayName: profileData?.displayName || currentUser.displayName,
+                            username: profileData?.username || null
                         });
                         setNeedsNameToProceed(false);
                     } else {
-                        // New email link user without a name.
-                        setUser({
-                            uid: currentUser.uid,
-                            email: currentUser.email,
-                            displayName: null
-                        });
-                        setNeedsNameToProceed(true);
+                        // No profile. If they have a displayName (e.g., from Google), create one.
+                        if (currentUser.displayName) {
+                            try {
+                                await Promise.race([
+                                    setDoc(userDocRef, {
+                                        displayName: currentUser.displayName,
+                                        email: currentUser.email,
+                                    }),
+                                    new Promise<never>((_, reject) =>
+                                        setTimeout(() => reject(new Error('Timeout creating user profile')), 10000)
+                                    )
+                                ]);
+                                setUser({
+                                    uid: currentUser.uid,
+                                    email: currentUser.email,
+                                    displayName: currentUser.displayName,
+                                    username: null
+                                });
+                                setNeedsNameToProceed(false);
+                            } catch (error) {
+                                console.error('Error creating user profile:', error);
+                                // Fallback to basic user data from auth
+                                setUser({
+                                    uid: currentUser.uid,
+                                    email: currentUser.email,
+                                    displayName: currentUser.displayName,
+                                    username: null
+                                });
+                                setNeedsNameToProceed(false);
+                            }
+                        } else {
+                            // New email link user without a name.
+                            setUser({
+                                uid: currentUser.uid,
+                                email: currentUser.email,
+                                displayName: null,
+                                username: null
+                            });
+                            setNeedsNameToProceed(true);
+                        }
                     }
+                } catch (error) {
+                    console.error('Error loading user profile:', error);
+                    // Fallback to basic user data from Firebase Auth
+                    setUser({
+                        uid: currentUser.uid,
+                        email: currentUser.email,
+                        displayName: currentUser.displayName,
+                        username: null
+                    });
+                    setNeedsNameToProceed(!currentUser.displayName);
                 }
             } else {
                 setUser(null);
@@ -1100,6 +1142,32 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         updateMovieRatings();
     }, [reviews]);
 
+    // Function to refresh user profile data (useful when username changes)
+    const refreshUserProfile = async () => {
+        if (!user?.uid) return;
+
+        try {
+            const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
+            const docSnap = await Promise.race([
+                getDoc(userDocRef),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Timeout refreshing user profile')), 10000)
+                )
+            ]);
+
+            if (docSnap.exists()) {
+                const profileData = docSnap.data();
+                setUser(prev => prev ? {
+                    ...prev,
+                    displayName: profileData?.displayName || prev.displayName,
+                    username: profileData?.username || null
+                } : null);
+            }
+        } catch (error) {
+            console.error('Error refreshing user profile:', error);
+        }
+    };
+
     const contextValue: AppContextType = {
         user,
         events,
@@ -1141,6 +1209,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         updateCollaboratorPermissions,
         hasScreenplayAccess,
         getScreenplayPermissions,
+        refreshUserProfile,
     };
 
     return (
