@@ -299,26 +299,31 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                 break;
             case 'character':
                 elementClasses += " font-bold uppercase mb-1 mt-4 text-center";
-                elementStyle.marginLeft = '2.2in'; // Adjusted to align with new dialogue width
+                elementStyle.marginLeft = '0';
+                elementStyle.marginRight = '0';
                 elementStyle.fontSize = '12pt';
                 elementStyle.letterSpacing = '1px';
+                elementStyle.display = 'flex';
+                elementStyle.justifyContent = 'center';
                 break;
             case 'dialogue':
                 elementClasses += " mb-3";
-                elementStyle.marginLeft = '1.5in'; // Reduced from 2.5in for wider dialogue
-                elementStyle.marginRight = '1.5in'; // Reduced from 2.5in for wider dialogue
+                // Make dialogue much wider for more words per line
+                elementStyle.marginLeft = '0.75in';
+                elementStyle.marginRight = '0.75in';
+                elementStyle.maxWidth = 'none';
                 elementStyle.fontSize = '12pt';
                 elementStyle.textAlign = 'left';
                 break;
             case 'parenthetical':
                 elementClasses += " text-gray-600 italic mb-1";
-                elementStyle.marginLeft = '2.0in'; // Adjusted to center within dialogue area
-                elementStyle.marginRight = '2.0in';
+                elementStyle.marginLeft = '1.5in';
+                elementStyle.marginRight = '1.5in';
                 elementStyle.fontSize = '12pt';
                 break;
             case 'transition':
                 elementClasses += " font-bold uppercase mt-4 mb-4";
-                elementStyle.marginLeft = '4in'; // Standard transition position
+                elementStyle.marginLeft = '4in';
                 elementStyle.fontSize = '12pt';
                 elementStyle.textAlign = 'right';
                 elementStyle.letterSpacing = '0.5px';
@@ -349,188 +354,213 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
 
 
     return (
-        <div className="max-w-5xl mx-auto"> {/* Increased from max-w-4xl to accommodate screenplay width */}
-            {/* Reader Header */}
-            <Card className="mb-4">
-                <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center">
-                            <BookOpen className="w-6 h-6 mr-2" />
-                            {screenplay.title}
-                        </CardTitle>
-                        <div className="flex items-center space-x-2">
-                            <Badge variant="outline" className="text-xs">
-                                Page {currentPage + 1} of {totalPages}
-                            </Badge>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={goToPreviousPage}
-                                disabled={currentPage === 0}
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={goToNextPage}
-                                disabled={currentPage === totalPages - 1}
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(screenplay.fileUrl, '_blank')}
-                                className="flex items-center"
-                            >
-                                <Download className="w-4 h-4 mr-1" />
-                                Download
-                            </Button>
+        <>
+            <div
+                className="w-full mx-auto"
+                style={{
+                    maxWidth: '1200px', // wider than before
+                    paddingLeft: 0,
+                    paddingRight: 0
+                }}
+            >
+                {/* Reader Header */}
+                <Card className="mb-4">
+                    <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center">
+                                <BookOpen className="w-6 h-6 mr-2" />
+                                {screenplay.title}
+                            </CardTitle>
+                            <div className="flex items-center space-x-2">
+                                <Badge variant="outline" className="text-xs">
+                                    Page {currentPage + 1} of {totalPages}
+                                </Badge>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToPreviousPage}
+                                    disabled={currentPage === 0}
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToNextPage}
+                                    disabled={currentPage === totalPages - 1}
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => window.open(screenplay.fileUrl, '_blank')}
+                                    className="flex items-center"
+                                >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    Download
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </CardHeader>
-            </Card>
+                    </CardHeader>
+                </Card>
 
-            {/* Selection Actions - Popup over selected text */}
-            {selectedText && user && selectionPosition && permissions?.canComment && (
-                <div
-                    className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
-                    style={{
-                        left: `${selectionPosition.x}px`,
-                        top: `${selectionPosition.y}px`,
-                        transform: 'translateX(-50%)'
-                    }}
-                >
-                    <div className="flex items-center space-x-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setShowCommentModal(true)}
-                            className="flex items-center"
-                        >
-                            <MessageCircle className="w-4 h-4 mr-1" />
-                            Comment
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                                setSelectedText(null);
-                                setSelectionPosition(null);
-                            }}
-                        >
-                            <X className="w-4 h-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
-
-            {/* Screenplay Content */}
-            <Card className="overflow-x-auto">
-                <CardContent className="p-0">
+                {/* Selection Actions - Popup over selected text */}
+                {selectedText && user && selectionPosition && permissions?.canComment && (
                     <div
-                        ref={pageRef}
-                        className="screenplay-page font-mono text-sm leading-relaxed select-text bg-white"
-                        onMouseUp={handleMouseUp}
+                        className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-3"
                         style={{
-                            minHeight: '800px',
-                            fontFamily: 'Courier New, Courier, monospace',
-                            fontSize: '12pt',
-                            lineHeight: '1.5',
-                            maxWidth: '8.5in', // Standard screenplay page width
-                            margin: '0 auto',
-                            padding: '1in 1in 1in 1.5in', // Standard screenplay margins
-                            color: '#000000'
+                            left: `${selectionPosition.x}px`,
+                            top: `${selectionPosition.y}px`,
+                            transform: 'translateX(-50%)'
                         }}
                     >
-                        {/* Page Header */}
-                        <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200 text-xs text-gray-400">
-                            <span className="uppercase font-mono">
-                                {screenplay.title}
-                            </span>
-                            <div className="flex items-center space-x-4">
-                                <span className="font-medium">
-                                    Page {currentPage + 1}
-                                </span>
-                            </div>
+                        <div className="flex items-center space-x-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setShowCommentModal(true)}
+                                className="flex items-center"
+                            >
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                Comment
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                    setSelectedText(null);
+                                    setSelectionPosition(null);
+                                }}
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
                         </div>
-
-                        {/* Page Elements */}
-                        {currentPageData?.content?.map((element: ScreenplayElement, index: number) =>
-                            renderElement(element, index)
-                        ) || (
-                                <div className="text-center text-gray-500 py-8">
-                                    <p>No content available for this page.</p>
-                                </div>
-                            )}
                     </div>
-                </CardContent>
-            </Card>
+                )}
 
-            {/* Comment Modal */}
-            {showCommentModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <Card className="w-full max-w-md mx-4">
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
-                                <span className="flex items-center">
-                                    <MessageCircle className="w-5 h-5 mr-2" />
-                                    Add Comment
+                {/* Screenplay Content */}
+                <Card className="overflow-x-auto">
+                    <CardContent className="p-0">
+                        <div
+                            ref={pageRef}
+                            className="screenplay-page font-mono text-sm leading-relaxed select-text bg-white"
+                            onMouseUp={handleMouseUp}
+                            style={{
+                                minHeight: '800px',
+                                fontFamily: 'Courier New, Courier, monospace',
+                                fontSize: '12pt',
+                                lineHeight: '1.5',
+                                width: '100%',
+                                maxWidth: '100%',
+                                margin: 0,
+                                padding: '4vw 2vw', // Responsive padding
+                                color: '#000000',
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            {/* Page Header */}
+                            <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200 text-xs text-gray-400">
+                                <span className="uppercase font-mono">
+                                    {screenplay.title}
                                 </span>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowCommentModal(false)}
-                                >
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="p-3 bg-gray-50 rounded border-l-4 border-blue-400">
-                                    <p className="text-sm font-medium text-gray-700 mb-1">Selected text:</p>
-                                    <blockquote className="text-sm italic text-gray-800 pl-2 border-l-2 border-gray-300 ml-2">
-                                        &ldquo;{selectedText?.text}&rdquo;
-                                    </blockquote>
-                                </div>
-                                <div>
-                                    <label className="text-sm font-medium text-gray-700 mb-2 block">
-                                        Your comment:
-                                    </label>
-                                    <Textarea
-                                        placeholder="Share your thoughts about this passage..."
-                                        value={commentText}
-                                        onChange={(e) => setCommentText(e.target.value)}
-                                        rows={4}
-                                        className="resize-none"
-                                    />
-                                </div>
-                                <div className="flex justify-end space-x-2">
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => {
-                                            setShowCommentModal(false);
-                                            setSelectedText(null);
-                                            setSelectionPosition(null);
-                                        }}
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        onClick={handleAddComment}
-                                        disabled={!commentText.trim()}
-                                    >
-                                        Add Comment
-                                    </Button>
+                                <div className="flex items-center space-x-4">
+                                    <span className="font-medium">
+                                        Page {currentPage + 1}
+                                    </span>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
 
-        </div>
+                            {/* Page Elements */}
+                            {currentPageData?.content?.map((element: ScreenplayElement, index: number) =>
+                                renderElement(element, index)
+                            ) || (
+                                    <div className="text-center text-gray-500 py-8">
+                                        <p>No content available for this page.</p>
+                                    </div>
+                                )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Comment Modal */}
+                {showCommentModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <Card className="w-full max-w-md mx-4">
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span className="flex items-center">
+                                        <MessageCircle className="w-5 h-5 mr-2" />
+                                        Add Comment
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setShowCommentModal(false)}
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-4">
+                                    <div className="p-3 bg-gray-50 rounded border-l-4 border-blue-400">
+                                        <p className="text-sm font-medium text-gray-700 mb-1">Selected text:</p>
+                                        <blockquote className="text-sm italic text-gray-800 pl-2 border-l-2 border-gray-300 ml-2">
+                                            &ldquo;{selectedText?.text}&rdquo;
+                                        </blockquote>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-700 mb-2 block">
+                                            Your comment:
+                                        </label>
+                                        <Textarea
+                                            placeholder="Share your thoughts about this passage..."
+                                            value={commentText}
+                                            onChange={(e) => setCommentText(e.target.value)}
+                                            rows={4}
+                                            className="resize-none"
+                                        />
+                                    </div>
+                                    <div className="flex justify-end space-x-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => {
+                                                setShowCommentModal(false);
+                                                setSelectedText(null);
+                                                setSelectionPosition(null);
+                                            }}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={handleAddComment}
+                                            disabled={!commentText.trim()}
+                                        >
+                                            Add Comment
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+
+            </div>
+            <style jsx>{`
+                @media (max-width: 900px) {
+                    .screenplay-page {
+                        padding: 2vw 1vw !important;
+                        font-size: 11pt !important;
+                    }
+                }
+                @media (max-width: 600px) {
+                    .screenplay-page {
+                        padding: 2vw 0.5vw !important;
+                        font-size: 10pt !important;
+                    }
+                }
+            `}</style>
+        </>
     );
 }
