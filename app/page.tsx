@@ -331,10 +331,7 @@ export default function HomePage() {
                 The platform for creators to build communities around their events and films.
               </p>
             </div>
-            <div></div>
-            <div></div>
-            <div>
-              <h3 className="font-semibold mb-4">Platform</h3>
+            <div><h3 className="font-semibold mb-4">Platform</h3>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
                   <Link href="/discover" className="hover:text-foreground">
@@ -361,6 +358,37 @@ export default function HomePage() {
                     Create
                   </Link>
                 </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Community</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  <a
+                    href="https://github.com/xkmato/cinemaplot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground"
+                  >
+                    GitHub Repository
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Terms and Policies</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li>
+                  <Link href="/privacy-policy" className="hover:text-foreground">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms-of-service" className="hover:text-foreground">
+                    Terms of Service
+                  </Link>
+                </li>
+
               </ul>
             </div>
 

@@ -1,4 +1,6 @@
 
+import Link from "next/link";
+
 export default function TermsOfService() {
     return (
         <main className="container mx-auto py-8 px-4">
@@ -12,6 +14,13 @@ export default function TermsOfService() {
                 <li>Service is provided &quot;as is&quot; without warranties of any kind.</li>
             </ul>
             <p>If you have questions, contact us at support@cinemaplot.com.</p>
+            <div className="mt-8">
+                <Link href="/" className="inline-block">
+                    <button className="bg-primary text-white px-4 py-2 rounded shadow hover:bg-primary-dark transition-colors">
+                        Back to Home
+                    </button>
+                </Link>
+            </div>
         </main>
     );
 }

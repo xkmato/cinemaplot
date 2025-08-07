@@ -1,4 +1,6 @@
 
+import Link from "next/link";
+
 export default function PrivacyPolicy() {
     return (
         <main className="container mx-auto py-8 px-4">
@@ -12,6 +14,13 @@ export default function PrivacyPolicy() {
                 <li>Contact us at hello@uvotamstudi.com for privacy-related questions.</li>
             </ul>
             <p>By using cinemaplot.com, you consent to this privacy policy.</p>
+            <div className="mt-8">
+                <Link href="/" className="inline-block">
+                    <button className="bg-primary text-white px-4 py-2 rounded shadow hover:bg-primary-dark transition-colors">
+                        Back to Home
+                    </button>
+                </Link>
+            </div>
         </main>
     );
 }
