@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
+import { validateFountainFile } from "@/lib/helpers";
 import { FileText, Play, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ export default function CreateScreenplayPage() {
     const [tags, setTags] = useState("");
     const [pdfFile, setPdfFile] = useState<File | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isValidatingFile, setIsValidatingFile] = useState(false);
     const [error, setError] = useState("");
 
     if (!user) {
@@ -35,17 +37,19 @@ export default function CreateScreenplayPage() {
         return <GetUserNameModal onSubmit={handleNameSubmit} />;
     }
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.type !== 'text/plain' && !file.name.toLowerCase().endsWith('.fountain')) {
-                setError("Only Fountain (.fountain) files are allowed for screenplays");
-                return;
-            }
+            setIsValidatingFile(true);
+            setError("Validating file format...");
 
-            const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
-            if (file.size > maxSizeInBytes) {
-                setError("File size must be less than 10MB");
+            const validation = await validateFountainFile(file);
+
+            setIsValidatingFile(false);
+
+            if (!validation.isValid) {
+                setError(validation.error || "Invalid file");
+                e.target.value = ''; // Clear the file input
                 return;
             }
 
@@ -58,7 +62,7 @@ export default function CreateScreenplayPage() {
         e.preventDefault();
 
         if (!title || !logLine || !synopsis || !genre || !pdfFile) {
-            setError("Please fill in all required fields and upload a Fountain file.");
+            setError("Please fill in all required fields and upload a Fountain (.fountain) file.");
             return;
         }
 
@@ -265,7 +269,7 @@ export default function CreateScreenplayPage() {
                                         <Input
                                             id="fountain"
                                             type="file"
-                                            accept=".fountain,.txt"
+                                            accept=".fountain"
                                             onChange={handleFileChange}
                                             required
                                             className="h-12 text-base border-2 border-dashed border-primary/30 focus:border-primary/50 transition-all duration-200 bg-background/50 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
@@ -275,11 +279,21 @@ export default function CreateScreenplayPage() {
                                         💡 Upload your screenplay as a Fountain (.fountain) file. Maximum file size: 10MB.
                                         <br /><br />
                                         📝 <strong>Fountain format</strong> is a simple markup syntax for writing screenplays in plain text. Key elements:
-                                        <br />• Scene headings: INT. COFFEE SHOP - DAY
-                                        <br />• Character names: JOHN (all caps, centered)
-                                        <br />• Dialogue: Regular text below character names
-                                        <br />• Action: Regular paragraphs describing what happens
-                                        <br />• Parentheticals: (whispers) or (V.O.)
+                                        <br />• <strong>Scene headings:</strong> INT. COFFEE SHOP - DAY or EXT. PARK - NIGHT
+                                        <br />• <strong>Character names:</strong> JOHN (all caps, on their own line)
+                                        <br />• <strong>Dialogue:</strong> Regular text below character names
+                                        <br />• <strong>Action:</strong> Regular paragraphs describing what happens
+                                        <br />• <strong>Parentheticals:</strong> (whispers) or (V.O.)
+                                        <br />• <strong>Transitions:</strong> FADE IN:, FADE OUT:, CUT TO:
+                                        <br /><br />
+                                        <strong>Example format:</strong>
+                                        <br />FADE IN:
+                                        <br />INT. COFFEE SHOP - DAY
+                                        <br />A busy coffee shop filled with morning customers.
+                                        <br />SARAH
+                                        <br />Can I get a large coffee, please?
+                                        <br /><br />
+                                        ⚠️ <strong>Note:</strong> Only .fountain files are accepted. Other formats like PDF, FDX, or Word documents need to be converted first.
                                         <br /><br />
                                         Learn more at <a href="https://fountain.io" target="_blank" rel="noopener" className="text-primary hover:underline">fountain.io</a>
                                     </div>
@@ -304,13 +318,18 @@ export default function CreateScreenplayPage() {
                                     </Button>
                                     <Button
                                         type="submit"
-                                        disabled={isLoading}
+                                        disabled={isLoading || isValidatingFile}
                                         className="h-12 px-8 text-base font-medium bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isLoading ? (
                                             <div className="flex items-center space-x-2">
                                                 <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                                                 <span>Uploading...</span>
+                                            </div>
+                                        ) : isValidatingFile ? (
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                                                <span>Validating...</span>
                                             </div>
                                         ) : (
                                             <div className="flex items-center space-x-2">

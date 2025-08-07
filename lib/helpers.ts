@@ -1,5 +1,106 @@
 import { Event } from './types';
 
+// Fountain file validation
+export const validateFountainFile = async (file: File): Promise<{ isValid: boolean; error?: string }> => {
+    // Check file extension
+    if (!file.name.toLowerCase().endsWith('.fountain')) {
+        return { isValid: false, error: "Only Fountain (.fountain) files are allowed for screenplays" };
+    }
+
+    // Check file size (10MB limit)
+    const maxSizeInBytes = 10 * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+        return { isValid: false, error: "File size must be less than 10MB" };
+    }
+
+    // Read and validate file content
+    try {
+        const content = await file.text();
+        
+        // Check if file is empty
+        if (!content.trim()) {
+            return { isValid: false, error: "The Fountain file appears to be empty" };
+        }
+
+        // Check for binary content (which shouldn't be in a text file)
+        if (content.includes('\x00') || content.includes('\uFFFD')) {
+            return { isValid: false, error: "This file appears to contain binary data. Fountain files should be plain text." };
+        }
+
+        const lines = content.split('\n');
+        
+        // Check for common Fountain elements
+        const sceneHeadingPattern = /^(INT\.|EXT\.|FADE IN:|FADE OUT:|FADE TO:|CUT TO:|DISSOLVE TO:)/i;
+        const hasSceneHeading = lines.some(line => sceneHeadingPattern.test(line.trim()));
+
+        // Check for character names (all caps, standalone lines)
+        const characterPattern = /^[A-Z][A-Z\s\.']+$/;
+        const hasCharacterNames = lines.some(line => {
+            const trimmed = line.trim();
+            return trimmed.length > 1 && 
+                   trimmed.length < 50 && 
+                   characterPattern.test(trimmed) &&
+                   !sceneHeadingPattern.test(trimmed) &&
+                   !trimmed.includes('FADE') &&
+                   !trimmed.includes('CUT TO') &&
+                   !trimmed.includes('DISSOLVE TO');
+        });
+
+        // Check for parentheticals (text in parentheses)
+        const hasParentheticals = lines.some(line => {
+            const trimmed = line.trim();
+            return trimmed.startsWith('(') && trimmed.endsWith(')') && trimmed.length > 2;
+        });
+
+        // Check for action lines (mixed case text that's not dialogue or character names)
+        const hasActionLines = lines.some(line => {
+            const trimmed = line.trim();
+            return trimmed.length > 0 && 
+                   trimmed !== trimmed.toUpperCase() && 
+                   !trimmed.startsWith('(') &&
+                   !sceneHeadingPattern.test(trimmed);
+        });
+
+        // Basic Fountain validation
+        if (!hasSceneHeading && !hasCharacterNames && !hasActionLines && !hasParentheticals) {
+            return { 
+                isValid: false, 
+                error: "This doesn't appear to be a valid Fountain screenplay. Fountain files should contain scene headings (INT./EXT.), character names, dialogue, or action lines." 
+            };
+        }
+
+        // More specific validation - should have scene headings for a proper screenplay
+        if (!hasSceneHeading) {
+            return { 
+                isValid: false, 
+                error: "Missing scene headings. Fountain screenplays should start with scene headings like 'INT. LOCATION - DAY' or 'EXT. LOCATION - NIGHT'." 
+            };
+        }
+
+        // Check if it might be a different format (like FDX or PDF content)
+        const suspiciousBinaryMarkers = ['<?xml', '<FinalDraft', '%PDF', 'PK\x03\x04'];
+        const contentStart = content.substring(0, 1000).toLowerCase();
+        
+        for (const marker of suspiciousBinaryMarkers) {
+            if (contentStart.includes(marker.toLowerCase())) {
+                return { 
+                    isValid: false, 
+                    error: "This appears to be a different file format (PDF, FDX, etc.). Please convert your screenplay to Fountain format first." 
+                };
+            }
+        }
+
+        return { isValid: true };
+
+    } catch (readError) {
+        console.error("Error reading file:", readError);
+        return { 
+            isValid: false, 
+            error: "Unable to read the file content. Please ensure it's a valid text file." 
+        };
+    }
+};
+
 // Date helpers
 export const getWeekStartDate = (date: Date): Date => {
   const d = new Date(date);

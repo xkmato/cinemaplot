@@ -1,0 +1,9 @@
+This is just a regular text file
+with no screenplay formatting.
+
+It doesn't have scene headings
+or character names
+or any proper Fountain syntax.
+
+Just random text that someone might
+accidentally try to upload.
