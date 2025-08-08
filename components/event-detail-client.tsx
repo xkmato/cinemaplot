@@ -15,7 +15,7 @@ import { generateEventStructuredData } from "@/lib/seo";
 import { AuditionRole, Event } from "@/lib/types";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { doc, getDoc } from "firebase/firestore";
-import { Bell, Calendar, Clapperboard, DollarSign, Heart, MapPin, MessageCircle, Plus, Share2, Users } from "lucide-react";
+import { Bell, Calendar, Clapperboard, DollarSign, Heart, MapPin, MessageCircle, Plus, Share2, Users, Edit } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -309,6 +309,14 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                 ← Back to Home
                             </Link>
                             <div className="flex items-center space-x-2">
+                                {currentEvent?.creatorId === user?.uid && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/events/${eventId}/edit`}>
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Edit
+                                        </Link>
+                                    </Button>
+                                )}
                                 <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share

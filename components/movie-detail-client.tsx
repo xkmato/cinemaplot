@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAppContext } from "@/lib/auth-context"
 import { generateMovieStructuredData } from "@/lib/seo"
 import { shouldUseUnoptimized } from "@/lib/utils"
-import { MessageCircle, Play, Share2, Star } from "lucide-react"
+import { MessageCircle, Play, Share2, Star, Edit } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -156,6 +156,14 @@ export default function MovieDetailClient({ movieId }: MovieDetailClientProps) {
                                 ← Back to Movies
                             </Link>
                             <div className="flex items-center space-x-2">
+                                {movie.creatorId === user?.uid && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/movies/${movieId}/edit`}>
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Edit
+                                        </Link>
+                                    </Button>
+                                )}
                                 <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                     <Share2 className="w-4 h-4 mr-2" />
                                     Share

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { AuditionRole, Event, Screenplay, ScreenplayComment } from "@/lib/types";
-import { Calendar, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users } from "lucide-react";
+import { Calendar, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users, Edit } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -212,10 +212,18 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                         </Link>
                         <div className="flex items-center space-x-2">
                             {screenplay.authorId === user?.uid && (
-                                <Button variant="outline" size="sm" onClick={() => setShowPrivacyManager(true)}>
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Privacy
-                                </Button>
+                                <>
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/screenplays/${screenplayId}/edit`}>
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Edit
+                                        </Link>
+                                    </Button>
+                                    <Button variant="outline" size="sm" onClick={() => setShowPrivacyManager(true)}>
+                                        <Settings className="w-4 h-4 mr-2" />
+                                        Privacy
+                                    </Button>
+                                </>
                             )}
                             <Button variant="outline" size="sm" onClick={() => setShowShareModal(true)}>
                                 <Share2 className="w-4 h-4 mr-2" />

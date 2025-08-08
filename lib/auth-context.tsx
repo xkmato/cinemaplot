@@ -54,9 +54,11 @@ interface AppContextType {
     handleEmailLinkSignIn: (e: React.FormEvent) => Promise<void>;
     handleNameSubmit: (name: string) => Promise<void>;
     createEvent: (eventData: Partial<Event>, imageFile?: File | null) => Promise<void>;
-    updateEvent: (eventId: string, updates: Partial<Event>) => Promise<void>;
+    updateEvent: (eventId: string, updates: Partial<Event>, imageFile?: File | null) => Promise<void>;
     createMovie: (movieData: Partial<Movie>, imageFile?: File | null) => Promise<void>;
+    updateMovie: (movieId: string, updates: Partial<Movie>, imageFile?: File | null) => Promise<void>;
     createScreenplay: (screenplayData: Partial<Screenplay>, pdfFile: File) => Promise<void>;
+    updateScreenplay: (screenplayId: string, updates: Partial<Screenplay>, pdfFile?: File | null) => Promise<void>;
     followEvent: (eventId: string) => Promise<void>;
     unfollowEvent: (eventId: string) => Promise<void>;
     isFollowingEvent: (eventId: string) => boolean;
@@ -252,7 +254,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
     };
 
-    const updateEvent = async (eventId: string, updates: Partial<Event>) => {
+    const updateEvent = async (eventId: string, updates: Partial<Event>, imageFile?: File | null) => {
         if (!user) throw new Error('User must be authenticated to update events');
 
         // Get reference to the event document
@@ -269,9 +271,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             throw new Error('You do not have permission to update this event');
         }
 
-        // Filter out undefined values to avoid Firebase errors
+        let imageUrl = eventData.imageUrl;
+        if (imageFile) {
+            const imageRef = ref(
+                storage,
+                `event-images/${appId}/${imageFile.name}-${Date.now()}`
+            );
+            const snapshot = await uploadBytes(imageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        // Filter out undefined values and add image URL if updated
         const cleanUpdates = Object.fromEntries(
-            Object.entries(updates).filter(([, value]) => value !== undefined)
+            Object.entries({ ...updates, ...(imageFile ? { imageUrl } : {}) }).filter(([, value]) => value !== undefined)
         );
 
         // Update the event with the provided updates
@@ -402,6 +414,138 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 }
             });
         }
+    };
+
+    const updateMovie = async (movieId: string, updates: Partial<Movie>, imageFile?: File | null) => {
+        if (!user) throw new Error('User must be authenticated to update movies');
+
+        // Get reference to the movie document
+        const movieDocRef = doc(db, `artifacts/${appId}/public/data/movies`, movieId);
+
+        // First check if the movie exists and user has permission to update it
+        const movieDoc = await getDoc(movieDocRef);
+        if (!movieDoc.exists()) {
+            throw new Error('Movie not found');
+        }
+
+        const movieData = movieDoc.data() as Movie;
+        if (movieData.creatorId !== user.uid) {
+            throw new Error('You do not have permission to update this movie');
+        }
+
+        let imageUrl = movieData.imageUrl;
+        if (imageFile) {
+            const imageRef = ref(
+                storage,
+                `movie-images/${appId}/${imageFile.name}-${Date.now()}`
+            );
+            const snapshot = await uploadBytes(imageRef, imageFile);
+            imageUrl = await getDownloadURL(snapshot.ref);
+        }
+
+        // Filter out undefined values and add image URL if updated
+        const cleanUpdates = Object.fromEntries(
+            Object.entries({ ...updates, ...(imageFile ? { imageUrl } : {}) }).filter(([, value]) => value !== undefined)
+        );
+
+        // Update the movie with the provided updates
+        await updateDoc(movieDocRef, {
+            ...cleanUpdates,
+            updatedAt: new Date().toISOString()
+        });
+
+        // Update local state
+        setMovies(prevMovies =>
+            prevMovies.map(movie =>
+                movie.id === movieId
+                    ? { ...movie, ...cleanUpdates, updatedAt: new Date().toISOString() }
+                    : movie
+            )
+        );
+    };
+
+    const updateScreenplay = async (screenplayId: string, updates: Partial<Screenplay>, pdfFile?: File | null) => {
+        if (!user) throw new Error('User must be authenticated to update screenplays');
+
+        // Get reference to the screenplay document
+        const screenplayDocRef = doc(db, `artifacts/${appId}/public/data/screenplays`, screenplayId);
+
+        // First check if the screenplay exists and user has permission to update it
+        const screenplayDoc = await getDoc(screenplayDocRef);
+        if (!screenplayDoc.exists()) {
+            throw new Error('Screenplay not found');
+        }
+
+        const screenplayData = screenplayDoc.data() as Screenplay;
+        if (screenplayData.authorId !== user.uid) {
+            throw new Error('You do not have permission to update this screenplay');
+        }
+
+        let fileUrl = screenplayData.fileUrl;
+        let fileSize = screenplayData.fileSize;
+        let processingUpdates = {};
+
+        // If a new file is provided, upload it and trigger reprocessing
+        if (pdfFile) {
+            // Validate file type and size
+            if (pdfFile.type !== 'text/plain' && !pdfFile.name.toLowerCase().endsWith('.fountain')) {
+                throw new Error('Only Fountain (.fountain) files are allowed for screenplays');
+            }
+
+            const maxSizeInBytes = 10 * 1024 * 1024; // 10MB
+            if (pdfFile.size > maxSizeInBytes) {
+                throw new Error('File size must be less than 10MB');
+            }
+
+            // Upload new file
+            const fountainRef = ref(
+                storage,
+                `screenplay-fountain/${appId}/${pdfFile.name}-${Date.now()}.fountain`
+            );
+            const snapshot = await uploadBytes(fountainRef, pdfFile);
+            fileUrl = await getDownloadURL(snapshot.ref);
+            fileSize = pdfFile.size;
+
+            // Reset processing status since we have a new file
+            processingUpdates = {
+                fileUrl,
+                fileName: pdfFile.name,
+                fileSize,
+                isProcessed: false,
+                processingStatus: 'pending' as const,
+                processingAttempts: 0,
+                processingProgress: 0,
+                content: null,
+                pageCount: undefined,
+                processedAt: undefined,
+                processingError: null
+            };
+        }
+
+        // Filter out undefined values and combine with file updates
+        const cleanUpdates = Object.fromEntries(
+            Object.entries({ ...updates, ...processingUpdates }).filter(([, value]) => value !== undefined)
+        );
+
+        // Update the screenplay with the provided updates
+        await updateDoc(screenplayDocRef, {
+            ...cleanUpdates,
+            updatedAt: new Date().toISOString()
+        });
+
+        // If a new file was uploaded, trigger reprocessing
+        if (pdfFile) {
+            processScreenplayFountainAsync(screenplayId, fileUrl);
+        }
+
+        // Update local state
+        setScreenplays(prevScreenplays =>
+            prevScreenplays.map(screenplay =>
+                screenplay.id === screenplayId
+                    ? { ...screenplay, ...cleanUpdates, updatedAt: new Date().toISOString() }
+                    : screenplay
+            )
+        );
     };
 
     // Add screenplay comment
@@ -1268,7 +1412,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         createEvent,
         updateEvent,
         createMovie,
+        updateMovie,
         createScreenplay,
+        updateScreenplay,
         followEvent,
         unfollowEvent,
         isFollowingEvent,
