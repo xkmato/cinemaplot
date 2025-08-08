@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Screenplay Page Persistence</title>
+  </head>
+  <body>
+    <h1>Test Screenplay Page Persistence</h1>
+
+    <div>
+      <p>Current page: <span id="currentPage">0</span></p>
+      <p>Saved page: <span id="savedPage">none</span></p>
+      <button onclick="setPage(1)">Go to Page 1</button>
+      <button onclick="setPage(2)">Go to Page 2</button>
+      <button onclick="setPage(3)">Go to Page 3</button>
+      <button onclick="loadSavedPage()">Load Saved Page</button>
+      <button onclick="clearSaved()">Clear Saved</button>
+      <button onclick="refresh()">Refresh Page</button>
+    </div>
+
+    <script>
+      const screenplayId = "test-screenplay-123";
+      let currentPage = 0;
+
+      function updateDisplay() {
+        document.getElementById("currentPage").textContent = currentPage;
+        const saved = localStorage.getItem(`screenplay-page-${screenplayId}`);
+        document.getElementById("savedPage").textContent = saved || "none";
+      }
+
+      function setPage(page) {
+        currentPage = page;
+        localStorage.setItem(
+          `screenplay-page-${screenplayId}`,
+          currentPage.toString()
+        );
+        console.log("Set page to:", page);
+        updateDisplay();
+      }
+
+      function loadSavedPage() {
+        const saved = localStorage.getItem(`screenplay-page-${screenplayId}`);
+        if (saved) {
+          currentPage = parseInt(saved, 10);
+          console.log("Loaded saved page:", currentPage);
+        }
+        updateDisplay();
+      }
+
+      function clearSaved() {
+        localStorage.removeItem(`screenplay-page-${screenplayId}`);
+        updateDisplay();
+      }
+
+      function refresh() {
+        window.location.reload();
+      }
+
+      // Load saved page on start
+      window.onload = function () {
+        loadSavedPage();
+        updateDisplay();
+      };
+
+      // Update display initially
+      updateDisplay();
+    </script>
+  </body>
+</html>

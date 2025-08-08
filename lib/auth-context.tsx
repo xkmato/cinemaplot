@@ -54,6 +54,7 @@ interface AppContextType {
     handleEmailLinkSignIn: (e: React.FormEvent) => Promise<void>;
     handleNameSubmit: (name: string) => Promise<void>;
     createEvent: (eventData: Partial<Event>, imageFile?: File | null) => Promise<void>;
+    updateEvent: (eventId: string, updates: Partial<Event>) => Promise<void>;
     createMovie: (movieData: Partial<Movie>, imageFile?: File | null) => Promise<void>;
     createScreenplay: (screenplayData: Partial<Screenplay>, pdfFile: File) => Promise<void>;
     followEvent: (eventId: string) => Promise<void>;
@@ -248,6 +249,44 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 }
             });
         }
+    };
+
+    const updateEvent = async (eventId: string, updates: Partial<Event>) => {
+        if (!user) throw new Error('User must be authenticated to update events');
+
+        // Get reference to the event document
+        const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+
+        // First check if the event exists and user has permission to update it
+        const eventDoc = await getDoc(eventDocRef);
+        if (!eventDoc.exists()) {
+            throw new Error('Event not found');
+        }
+
+        const eventData = eventDoc.data() as Event;
+        if (eventData.creatorId !== user.uid) {
+            throw new Error('You do not have permission to update this event');
+        }
+
+        // Filter out undefined values to avoid Firebase errors
+        const cleanUpdates = Object.fromEntries(
+            Object.entries(updates).filter(([, value]) => value !== undefined)
+        );
+
+        // Update the event with the provided updates
+        await updateDoc(eventDocRef, {
+            ...cleanUpdates,
+            updatedAt: new Date().toISOString()
+        });
+
+        // Update local state
+        setEvents(prevEvents =>
+            prevEvents.map(event =>
+                event.id === eventId
+                    ? { ...event, ...cleanUpdates, updatedAt: new Date().toISOString() }
+                    : event
+            )
+        );
     };
 
     const createMovie = async (movieData: Partial<Movie>, imageFile?: File | null) => {
@@ -1188,6 +1227,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         handleEmailLinkSignIn,
         handleNameSubmit,
         createEvent,
+        updateEvent,
         createMovie,
         createScreenplay,
         followEvent,

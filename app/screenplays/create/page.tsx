@@ -15,7 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export default function CreateScreenplayPage() {
+export default function CreatePreprodProjectPage() {
     const { user, needsNameToProceed, handleNameSubmit, createScreenplay } = useAppContext();
     const router = useRouter();
 
@@ -132,10 +132,10 @@ export default function CreateScreenplayPage() {
                                 <div className="space-y-1">
                                     <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent flex items-center space-x-3">
                                         <FileText className="w-8 h-8 text-primary" />
-                                        <span>Upload Screenplay</span>
+                                        <span>Start Your Preproduction Project</span>
                                     </CardTitle>
                                     <p className="text-muted-foreground text-sm">
-                                        Share your short film screenplay with the community
+                                        Upload your screenplay to begin managing your preproduction project
                                     </p>
                                 </div>
                                 <Button
@@ -163,13 +163,13 @@ export default function CreateScreenplayPage() {
                                 {/* Title */}
                                 <div className="space-y-3">
                                     <Label htmlFor="title" className="text-base font-semibold text-foreground flex items-center space-x-1">
-                                        <span>Screenplay Title</span>
+                                        <span>Project Title</span>
                                         <span className="text-destructive">*</span>
                                     </Label>
                                     <Input
                                         id="title"
                                         type="text"
-                                        placeholder="Enter your screenplay title..."
+                                        placeholder="Enter your project title..."
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         required
@@ -186,7 +186,7 @@ export default function CreateScreenplayPage() {
                                     <Input
                                         id="logLine"
                                         type="text"
-                                        placeholder="A one-sentence description of your screenplay..."
+                                        placeholder="A one-sentence description of your project..."
                                         value={logLine}
                                         onChange={(e) => setLogLine(e.target.value)}
                                         required
@@ -206,7 +206,7 @@ export default function CreateScreenplayPage() {
                                     </Label>
                                     <Textarea
                                         id="synopsis"
-                                        placeholder="Provide a detailed description of your screenplay's story, themes, and style..."
+                                        placeholder="Provide a detailed description of your project's story, themes, style, and preproduction plans..."
                                         value={synopsis}
                                         onChange={(e) => setSynopsis(e.target.value)}
                                         required
@@ -255,14 +255,14 @@ export default function CreateScreenplayPage() {
                                         className="h-12 text-base border-2 focus:border-primary/50 transition-all duration-200 bg-background/50"
                                     />
                                     <div className="text-sm text-muted-foreground">
-                                        Separate tags with commas to help readers discover your screenplay
+                                        Separate tags with commas to help readers discover your project
                                     </div>
                                 </div>
 
                                 {/* PDF Upload */}
                                 <div className="space-y-3">
                                     <Label htmlFor="fdx" className="text-base font-semibold text-foreground flex items-center space-x-1">
-                                        <span>📄 Screenplay File</span>
+                                        <span>📄 Screenplay File (Required to Start Project)</span>
                                         <span className="text-destructive">*</span>
                                     </Label>
                                     <div className="relative">
@@ -276,7 +276,13 @@ export default function CreateScreenplayPage() {
                                         />
                                     </div>
                                     <div className="text-sm text-muted-foreground bg-primary/5 p-3 rounded-lg border border-primary/10">
-                                        💡 Upload your screenplay as a Fountain (.fountain) file. Maximum file size: 10MB.
+                                        💡 Upload your screenplay as a Fountain (.fountain) file to start your preproduction project. Maximum file size: 10MB.
+                                        <br /><br />
+                                        🎬 <strong>Why start with a script?</strong> Your screenplay is the foundation of your preproduction project. Once uploaded, you can:
+                                        <br />• Share it with collaborators for feedback
+                                        <br />• Plan your production timeline
+                                        <br />• Organize casting and crew recruitment
+                                        <br />• Track project progress from script to screen
                                         <br /><br />
                                         📝 <strong>Fountain format</strong> is a simple markup syntax for writing screenplays in plain text. Key elements:
                                         <br />• <strong>Scene headings:</strong> INT. COFFEE SHOP - DAY or EXT. PARK - NIGHT
@@ -334,7 +340,7 @@ export default function CreateScreenplayPage() {
                                         ) : (
                                             <div className="flex items-center space-x-2">
                                                 <Upload className="w-4 h-4" />
-                                                <span>Upload Screenplay</span>
+                                                <span>Start Preproduction Project</span>
                                             </div>
                                         )}
                                     </Button>

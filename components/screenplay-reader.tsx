@@ -41,7 +41,57 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     const [selectionPosition, setSelectionPosition] = useState<{ x: number, y: number } | null>(null);
     const [isRetrying, setIsRetrying] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [pageRestored, setPageRestored] = useState(false);
+    const [hasLoadedSavedPage, setHasLoadedSavedPage] = useState(false);
     const pageRef = useRef<HTMLDivElement>(null);
+
+    // Reset page loading state when screenplay changes
+    React.useEffect(() => {
+        setHasLoadedSavedPage(false);
+        setCurrentPage(0); // Reset to first page initially
+    }, [screenplay.id]);
+
+    // Load saved page on component mount and validate bounds
+    React.useEffect(() => {
+        // Only proceed if we have content loaded and haven't already loaded a saved page
+        if (!screenplay.content || screenplay.content.length === 0 || hasLoadedSavedPage) {
+            return;
+        }
+
+        const totalPages = screenplay.content.length;
+        const savedPage = localStorage.getItem(`screenplay-page-${screenplay.id}`);
+
+        if (savedPage) {
+            const pageNumber = parseInt(savedPage, 10);
+            if (!isNaN(pageNumber) && pageNumber >= 0 && pageNumber < totalPages) {
+                setCurrentPage(pageNumber);
+                setHasLoadedSavedPage(true);
+                if (pageNumber > 0) {
+                    setPageRestored(true);
+                    // Hide the indicator after 2 seconds
+                    setTimeout(() => setPageRestored(false), 2000);
+                }
+            } else if (pageNumber >= totalPages) {
+                // If saved page is beyond current content, go to last page
+                const lastPage = Math.max(0, totalPages - 1);
+                setCurrentPage(lastPage);
+                setHasLoadedSavedPage(true);
+            } else {
+                // Invalid saved page, start fresh
+                setHasLoadedSavedPage(true);
+            }
+        } else {
+            // No saved page, mark as loaded so we don't keep checking
+            setHasLoadedSavedPage(true);
+        }
+    }, [screenplay.id, screenplay.content, hasLoadedSavedPage]);
+
+    // Save current page to localStorage whenever it changes (but only if we've loaded content)
+    React.useEffect(() => {
+        if (hasLoadedSavedPage) {
+            localStorage.setItem(`screenplay-page-${screenplay.id}`, currentPage.toString());
+        }
+    }, [currentPage, screenplay.id, hasLoadedSavedPage]);
 
     // Handle text selection - moved to top level to avoid conditional hook
     const handleMouseUp = useCallback(() => {
@@ -94,9 +144,46 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
         setIsFullscreen(!isFullscreen);
     };
 
+    // Navigation functions with useCallback to prevent unnecessary re-renders
+    const goToPreviousPage = React.useCallback(() => {
+        setCurrentPage(prev => {
+            if (prev > 0) {
+                setSelectedText(null);
+                setSelectionPosition(null);
+                // Scroll to top when changing pages
+                if (pageRef.current) {
+                    pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return prev - 1;
+            }
+            return prev;
+        });
+    }, []);
+
+    const goToNextPage = React.useCallback(() => {
+        setCurrentPage(prev => {
+            const totalPages = screenplay.content?.length || 0;
+            if (prev < totalPages - 1) {
+                setSelectedText(null);
+                setSelectionPosition(null);
+                // Scroll to top when changing pages
+                if (pageRef.current) {
+                    pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                return prev + 1;
+            }
+            return prev;
+        });
+    }, [screenplay.content]);
+
     // Handle keyboard shortcuts
     React.useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
+            // Don't handle shortcuts if user is typing in a text field
+            if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
             // F11 for fullscreen toggle
             if (event.key === 'F11') {
                 event.preventDefault();
@@ -106,11 +193,25 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             if (event.key === 'Escape' && isFullscreen) {
                 setIsFullscreen(false);
             }
+            // Arrow keys for page navigation
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                goToPreviousPage();
+            }
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault();
+                goToNextPage();
+            }
+            // Space bar for next page
+            if (event.key === ' ') {
+                event.preventDefault();
+                goToNextPage();
+            }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isFullscreen]);
+    }, [isFullscreen, goToPreviousPage, goToNextPage]);
 
     // Check if user has access to this screenplay
     if (!hasScreenplayAccess(screenplay)) {
@@ -263,24 +364,6 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
         currentPageData = screenplay.content?.[currentPage];
     }
 
-    // Navigate to previous page
-    const goToPreviousPage = () => {
-        if (currentPage > 0) {
-            setCurrentPage(currentPage - 1);
-            setSelectedText(null);
-            setSelectionPosition(null);
-        }
-    };
-
-    // Navigate to next page
-    const goToNextPage = () => {
-        if (currentPage < totalPages - 1) {
-            setCurrentPage(currentPage + 1);
-            setSelectedText(null);
-            setSelectionPosition(null);
-        }
-    };
-
     // Add comment
     const handleAddComment = async () => {
         if (!selectedText || !commentText.trim() || !user) return;
@@ -407,6 +490,11 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                                         Fullscreen
                                     </Badge>
                                 )}
+                                {pageRestored && (
+                                    <Badge variant="default" className="ml-2 text-xs bg-green-600">
+                                        Restored to page {currentPage + 1}
+                                    </Badge>
+                                )}
                             </CardTitle>
                             <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
                                 <Badge variant="outline" className="text-xs hidden sm:inline-flex">
@@ -522,9 +610,16 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                         >
                             {/* Page Header */}
                             <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-200 text-xs text-gray-400">
-                                <span className="uppercase font-mono">
-                                    {screenplay.title}
-                                </span>
+                                <div className="flex items-center space-x-4">
+                                    <span className="uppercase font-mono">
+                                        {screenplay.title}
+                                    </span>
+                                    {isFullscreen && (
+                                        <span className="text-xs text-gray-500 hidden sm:inline">
+                                            Use ←→ keys or Space to navigate • F11 to exit fullscreen
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex items-center space-x-4">
                                     <span className="font-medium">
                                         Page {currentPage + 1}
@@ -540,6 +635,53 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                                         <p>No content available for this page.</p>
                                     </div>
                                 )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Bottom Navigation - Especially useful in fullscreen */}
+                <Card className="mt-4">
+                    <CardContent className="py-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToPreviousPage}
+                                    disabled={currentPage === 0}
+                                    className="flex items-center px-2 sm:px-3"
+                                >
+                                    <ChevronLeft className="w-4 h-4 sm:mr-1" />
+                                    <span className="hidden sm:inline">Previous</span>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToNextPage}
+                                    disabled={currentPage === totalPages - 1}
+                                    className="flex items-center px-2 sm:px-3"
+                                >
+                                    <span className="hidden sm:inline">Next</span>
+                                    <ChevronRight className="w-4 h-4 sm:ml-1" />
+                                </Button>
+                            </div>
+
+                            <div className="flex items-center space-x-2 sm:space-x-4">
+                                <Badge variant="outline" className="text-xs">
+                                    Page {currentPage + 1} of {totalPages}
+                                </Badge>
+                                {!isFullscreen && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleFullscreenToggle}
+                                        className="flex items-center px-2 sm:px-3"
+                                    >
+                                        <Expand className="w-4 h-4 sm:mr-1" />
+                                        <span className="hidden sm:inline">Fullscreen</span>
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     </CardContent>
                 </Card>

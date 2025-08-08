@@ -39,16 +39,18 @@ export async function generateMetadata({ params }: ScreenplayPageProps): Promise
 
     if (!screenplay) {
         return generateSEOMetadata({
-            title: 'Screenplay Not Found',
-            description: 'The requested screenplay could not be found.',
+            title: 'Project Not Found',
+            description: 'The requested preproduction project could not be found.',
             url: `/screenplays/${id}`,
         });
     }
 
     const keywords = [
+        'preproduction',
+        'film project',
         'screenplay',
         'script',
-        'short film',
+        'filmmaking',
         ...(screenplay.genre ? [screenplay.genre] : []),
         ...(screenplay.tags || []),
     ].filter(Boolean);
@@ -58,8 +60,8 @@ export async function generateMetadata({ params }: ScreenplayPageProps): Promise
         : `${screenplay.synopsis?.slice(0, 155)}...`;
 
     return generateSEOMetadata({
-        title: `${screenplay.title} - Screenplay by ${screenplay.creatorName}`,
-        description: `${description} Read this original ${screenplay.genre || 'short film'} screenplay on CinemaPlot.`,
+        title: `${screenplay.title} - Preproduction Project by ${screenplay.creatorName}`,
+        description: `${description} Explore this ${screenplay.genre || 'film'} preproduction project on CinemaPlot.`,
         url: `/screenplays/${screenplay.id}`,
         type: 'article',
         keywords,
@@ -76,7 +78,7 @@ export default async function ScreenplayDetailPage({ params }: ScreenplayPagePro
 
     const breadcrumbStructuredData = generateBreadcrumbStructuredData([
         { name: 'Home', url: '/' },
-        { name: 'Screenplays', url: '/screenplays' },
+        { name: 'Preproduction', url: '/screenplays' },
         { name: screenplay.title, url: `/screenplays/${screenplay.id}` },
     ]);
 

@@ -29,7 +29,7 @@ export default function HomePage() {
   // Calculate real statistics
   const totalEvents = events.length;
   const totalMovies = movies.length;
-  const totalScreenplays = screenplays.length;
+  const totalPreprodProjects = screenplays.length;
 
   // Calculate unique community members (creators + followers)
   const allCreatorIds = new Set([
@@ -70,10 +70,10 @@ export default function HomePage() {
       .slice(0, 3);
   })();
 
-  // Get featured screenplays (recent screenplays with good ratings, fallback to recent screenplays)
-  const featuredScreenplays = (() => {
-    // First try to get screenplays with good ratings (4.0+)
-    const highRatedScreenplays = screenplays
+  // Get featured preproduction projects (recent projects with good ratings, fallback to recent projects)
+  const featuredPreprodProjects = (() => {
+    // First try to get projects with good ratings (4.0+)
+    const highRatedProjects = screenplays
       .filter(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
       .sort((a, b) => {
         if (b.averageRating! !== a.averageRating!) {
@@ -83,12 +83,12 @@ export default function HomePage() {
       })
       .slice(0, 3);
 
-    // If we have enough high-rated screenplays, return them
-    if (highRatedScreenplays.length >= 2) {
-      return highRatedScreenplays;
+    // If we have enough high-rated projects, return them
+    if (highRatedProjects.length >= 2) {
+      return highRatedProjects;
     }
 
-    // Otherwise, return the most recent screenplays
+    // Otherwise, return the most recent projects
     return screenplays
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 3);
@@ -130,7 +130,7 @@ export default function HomePage() {
                 Movies
               </Link>
               <Link href="/screenplays" className="text-sm font-medium hover:text-primary">
-                Screenplays
+                Preproduction
               </Link>
               <Link href="/create" className="text-sm font-medium hover:text-primary">
                 Create
@@ -169,15 +169,15 @@ export default function HomePage() {
         <div className="container mx-auto text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             Create, Share & Discover
-            <span className="block text-primary">Amazing Events, Films & Screenplays</span>
+            <span className="block text-primary">Amazing Events, Films & Preproduction Projects</span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Build a community around your events, movies, and screenplays. Connect with audiences, get followers,
-            and make your content discoverable.
+            Build a community around your events, movies, and preproduction projects. Start with your script,
+            connect with audiences, get collaborators, and manage your project from concept to screen.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="text-lg px-8" asChild>
-              <Link href="/create">Add Event, Film, or Screenplay</Link>
+              <Link href="/create">Add Event, Film, or Project</Link>
             </Button>
             <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent" asChild>
               <Link href="/discover">Explore Content</Link>
@@ -199,8 +199,8 @@ export default function HomePage() {
               <div className="text-muted-foreground">Films Shared</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary mb-2">{totalScreenplays}</div>
-              <div className="text-muted-foreground">Screenplays</div>
+              <div className="text-3xl font-bold text-primary mb-2">{totalPreprodProjects}</div>
+              <div className="text-muted-foreground">Preproduction Projects</div>
             </div>
             <div>
               <div className="text-3xl font-bold text-primary mb-2">{totalCommunityMembers || 0}</div>
@@ -280,22 +280,22 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Featured Screenplays - Only show if there are screenplays */}
-      {featuredScreenplays.length > 0 && (
+      {/* Featured Preproduction Projects - Only show if there are projects */}
+      {featuredPreprodProjects.length > 0 && (
         <section className="py-16">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold">
-                {featuredScreenplays.some(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
-                  ? 'Featured Screenplays'
-                  : 'Recent Screenplays'}
+                {featuredPreprodProjects.some(screenplay => screenplay.averageRating && screenplay.averageRating >= 4.0)
+                  ? 'Featured Preproduction Projects'
+                  : 'Recent Preproduction Projects'}
               </h2>
               <Button variant="outline" asChild>
-                <Link href="/screenplays">View All Screenplays</Link>
+                <Link href="/screenplays">View All Projects</Link>
               </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredScreenplays.map((screenplay) => (
+              {featuredPreprodProjects.map((screenplay) => (
                 <ScreenplayCard key={screenplay.id} screenplay={screenplay} />
               ))}
             </div>
@@ -350,7 +350,7 @@ export default function HomePage() {
                 </li>
                 <li>
                   <Link href="/screenplays" className="hover:text-foreground">
-                    Screenplays
+                    Preproduction
                   </Link>
                 </li>
                 <li>

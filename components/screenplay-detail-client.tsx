@@ -1,5 +1,7 @@
 'use client';
 
+import AddAuditionRoles from "@/components/add-audition-roles";
+import CreateAuditionModal, { AuditionFormData } from "@/components/create-audition-modal";
 import ScreenplayPrivacyManager from "@/components/screenplay-privacy-manager";
 import ScreenplayReader from "@/components/screenplay-reader";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
-import { Screenplay, ScreenplayComment } from "@/lib/types";
-import { FileText, Globe, Lock, MessageCircle, RefreshCw, Settings, Share2, Star, User } from "lucide-react";
+import { AuditionRole, Event, Screenplay, ScreenplayComment } from "@/lib/types";
+import { Calendar, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -18,7 +20,7 @@ interface ScreenplayDetailClientProps {
 }
 
 export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetailClientProps) {
-    const { user, screenplays, screenplayComments, submitScreenplayComment, retryScreenplayProcessing } = useAppContext();
+    const { user, screenplays, events, createEvent, updateEvent, screenplayComments, submitScreenplayComment, retryScreenplayProcessing } = useAppContext();
     const [screenplay, setScreenplay] = useState<Screenplay | null>(null);
     const [comments, setComments] = useState<ScreenplayComment[]>([]);
     const [newComment, setNewComment] = useState("");
@@ -29,6 +31,9 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
     const [quoteComment, setQuoteComment] = useState("");
     const [isRetrying, setIsRetrying] = useState(false);
     const [showPrivacyManager, setShowPrivacyManager] = useState(false);
+    const [showCreateAudition, setShowCreateAudition] = useState(false);
+    const [showAddRoles, setShowAddRoles] = useState(false);
+    const [selectedAudition, setSelectedAudition] = useState<Event | null>(null);
 
     useEffect(() => {
         const foundScreenplay = screenplays.find(s => s.id === screenplayId);
@@ -36,9 +41,14 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
     }, [screenplays, screenplayId]);
 
     useEffect(() => {
-        const screenplayCommentsForThis = screenplayComments.filter(comment => comment.screenplayId === screenplayId);
+        const screenplayCommentsForThis = screenplayComments.filter((comment: ScreenplayComment) => comment.screenplayId === screenplayId);
         setComments(screenplayCommentsForThis);
     }, [screenplayComments, screenplayId]);
+
+    // Get audition events for this screenplay
+    const auditionsForThisScreenplay = events.filter(event =>
+        event.type === 'audition' && event.screenplayId === screenplayId
+    );
 
     const handleCommentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,15 +91,74 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
     };
 
     const handleRetryProcessing = async () => {
-        if (!screenplay || !retryScreenplayProcessing) return;
+        if (!user || !screenplay) return;
 
         setIsRetrying(true);
         try {
             await retryScreenplayProcessing(screenplay.id);
         } catch (error) {
-            console.error('Failed to retry processing:', error);
+            console.error('Error retrying processing:', error);
         } finally {
             setIsRetrying(false);
+        }
+    };
+
+    const handleCreateAudition = async (auditionData: AuditionFormData) => {
+        if (!screenplay || !user) return;
+
+        try {
+            // Create the audition event with all required fields
+            const eventData: Partial<Event> = {
+                title: auditionData.title,
+                description: auditionData.description,
+                date: auditionData.date,
+                time: auditionData.time,
+                location: auditionData.location,
+                type: 'audition',
+                screenplayId: screenplay.id,
+                auditionRoles: auditionData.roles,
+                tags: ['audition', 'casting', screenplay.genre || 'film'].filter(Boolean),
+                // Add default values for required fields
+                isMultiDay: false,
+                numberOfDays: 1,
+                deleted: false,
+                paused: false,
+                price: 'Free',
+                followers: []
+                // Don't include undefined fields - Firebase doesn't like them
+            };
+
+            await createEvent(eventData);
+
+            // Close the modal after successful creation
+            setShowCreateAudition(false);
+        } catch (error) {
+            console.error('Failed to create audition:', error);
+            // Let the modal handle error display
+            throw error;
+        }
+    };
+
+    const handleAddRolesToAudition = async (eventId: string, newRoles: AuditionRole[]) => {
+        try {
+            // Get the current event to merge with existing roles
+            const currentEvent = events.find(event => event.id === eventId);
+            if (!currentEvent) {
+                throw new Error('Audition event not found');
+            }
+
+            const existingRoles = currentEvent.auditionRoles || [];
+            const updatedRoles = [...existingRoles, ...newRoles];
+
+            await updateEvent(eventId, { auditionRoles: updatedRoles });
+
+            // Close the modal after successful addition
+            setShowAddRoles(false);
+            setSelectedAudition(null);
+        } catch (error) {
+            console.error('Failed to add roles to audition:', error);
+            // Let the modal handle error display
+            throw error;
         }
     };
 
@@ -112,7 +181,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                     <div className="container mx-auto px-4 py-4">
                         <div className="flex items-center justify-between">
                             <Link href="/screenplays" className="text-lg font-semibold hover:text-primary">
-                                ← Back to Screenplays
+                                ← Back to Projects
                             </Link>
                         </div>
                     </div>
@@ -136,7 +205,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
                         <Link href="/screenplays" className="text-lg font-semibold hover:text-primary">
-                            ← Back to Screenplays
+                            ← Back to Projects
                         </Link>
                         <div className="flex items-center space-x-2">
                             {screenplay.authorId === user?.uid && (
@@ -196,7 +265,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                                     <CardHeader>
                                         <CardTitle className="flex items-center">
                                             <FileText className="w-5 h-5 mr-2" />
-                                            Read Screenplay
+                                            Read Script
                                             {screenplay.processingStatus === 'processing' && (
                                                 <Badge variant="secondary" className="ml-2">
                                                     Processing...
@@ -458,10 +527,85 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                                 </CardContent>
                             </Card>
 
+                            {/* Auditions Section - Only show for project owner */}
+                            {screenplay.authorId === user?.uid && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center justify-between">
+                                            <span className="flex items-center">
+                                                <Users className="w-5 h-5 mr-2" />
+                                                Auditions
+                                            </span>
+                                            <Button
+                                                size="sm"
+                                                onClick={() => setShowCreateAudition(true)}
+                                            >
+                                                <Plus className="w-4 h-4 mr-1" />
+                                                Create
+                                            </Button>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {auditionsForThisScreenplay.length === 0 ? (
+                                            <div className="text-center py-6">
+                                                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    No auditions created yet
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Create audition events to start casting for your project
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {auditionsForThisScreenplay.map(audition => (
+                                                    <div key={audition.id} className="p-3 border rounded-lg">
+                                                        <h4 className="font-medium text-sm">{audition.title}</h4>
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            {new Date(audition.date).toLocaleDateString()}
+                                                            {audition.auditionRoles && (
+                                                                <>
+                                                                    <span>•</span>
+                                                                    <span>{audition.auditionRoles.length} roles</span>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-2 mt-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="flex-1"
+                                                                asChild
+                                                            >
+                                                                <Link href={`/events/${audition.id}`}>
+                                                                    Manage Audition
+                                                                </Link>
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    setSelectedAudition(audition);
+                                                                    setShowAddRoles(true);
+                                                                }}
+                                                            >
+                                                                <Plus className="w-3 h-3 mr-1" />
+                                                                Add Roles
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
                             {/* Creator Info */}
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>About the Writer</CardTitle>
+                                    <CardTitle>About the Creator</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="flex items-center space-x-3">
@@ -472,7 +616,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                                         </Avatar>
                                         <div>
                                             <div className="font-medium">{screenplay.creatorName}</div>
-                                            <div className="text-sm text-muted-foreground">Screenplay Writer</div>
+                                            <div className="text-sm text-muted-foreground">Project Creator</div>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -500,7 +644,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                     <Card className="w-full max-w-md">
                         <CardHeader>
                             <div className="flex items-center justify-between">
-                                <CardTitle>Share Screenplay</CardTitle>
+                                <CardTitle>Share Project</CardTitle>
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -541,6 +685,28 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                         </CardContent>
                     </Card>
                 </div>
+            )}
+
+            {/* Create Audition Modal */}
+            {showCreateAudition && screenplay && (
+                <CreateAuditionModal
+                    screenplay={screenplay}
+                    onClose={() => setShowCreateAudition(false)}
+                    onSubmit={handleCreateAudition}
+                />
+            )}
+
+            {/* Add Roles to Audition Modal */}
+            {showAddRoles && selectedAudition && screenplay && (
+                <AddAuditionRoles
+                    event={selectedAudition}
+                    screenplay={screenplay}
+                    onClose={() => {
+                        setShowAddRoles(false);
+                        setSelectedAudition(null);
+                    }}
+                    onAddRoles={handleAddRolesToAudition}
+                />
             )}
         </div>
     );

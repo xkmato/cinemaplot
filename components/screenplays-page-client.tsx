@@ -9,12 +9,12 @@ import { FileText, Play, Plus } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function ScreenplaysPageClient() {
+export default function PreprodProjectsPageClient() {
     const { user, screenplays, needsNameToProceed, handleNameSubmit } = useAppContext();
     const [showAuthModal, setShowAuthModal] = useState(false);
 
-    // Sort screenplays by creation date (newest first)
-    const sortedScreenplays = screenplays
+    // Sort projects by creation date (newest first)
+    const sortedProjects = screenplays
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return (
@@ -40,7 +40,7 @@ export default function ScreenplaysPageClient() {
                                 Movies
                             </Link>
                             <Link href="/screenplays" className="text-sm font-medium text-primary">
-                                Screenplays
+                                Preproduction
                             </Link>
                             <Link href="/create" className="text-sm font-medium hover:text-primary">
                                 Create
@@ -68,30 +68,30 @@ export default function ScreenplaysPageClient() {
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-12">
                         <h1 className="text-4xl font-bold mb-4">
-                            Discover Screenplays
+                            Discover Preproduction Projects
                         </h1>
                         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                            Read, comment, and discuss original short film screenplays from emerging filmmakers.
+                            Explore film projects in development, read scripts, and connect with emerging filmmakers.
                         </p>
                     </div>
 
-                    {sortedScreenplays.length === 0 ? (
+                    {sortedProjects.length === 0 ? (
                         <div className="text-center py-16">
                             <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                            <h3 className="text-xl font-semibold mb-2">No Screenplays Yet</h3>
+                            <h3 className="text-xl font-semibold mb-2">No Projects Yet</h3>
                             <p className="text-muted-foreground mb-4">
-                                Be the first to share a screenplay and get feedback from the community!
+                                Be the first to start a preproduction project and connect with collaborators!
                             </p>
                             <Button asChild>
                                 <Link href="/screenplays/create">
                                     <Plus className="w-4 h-4 mr-2" />
-                                    Upload Your First Screenplay
+                                    Start Your First Project
                                 </Link>
                             </Button>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {sortedScreenplays.map((screenplay) => (
+                            {sortedProjects.map((screenplay) => (
                                 <ScreenplayCard key={screenplay.id} screenplay={screenplay} />
                             ))}
                         </div>

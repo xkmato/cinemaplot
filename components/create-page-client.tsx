@@ -42,7 +42,7 @@ export default function CreatePageClient() {
                                 Movies
                             </Link>
                             <Link href="/screenplays" className="text-sm font-medium hover:text-primary">
-                                Screenplays
+                                Preproduction
                             </Link>
                         </nav>
                     </div>
@@ -156,34 +156,34 @@ export default function CreatePageClient() {
                                             <FileText className="w-6 h-6 text-primary" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-xl">Upload Screenplay</CardTitle>
-                                            <CardDescription>Share your writing</CardDescription>
+                                            <CardTitle className="text-xl">Start Preproduction Project</CardTitle>
+                                            <CardDescription>Upload script & manage project</CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-muted-foreground mb-6">
-                                        Share your original screenplays with the community. Get feedback, discuss your work, and connect with other writers and filmmakers.
+                                        Start your preproduction project by uploading your screenplay. Organize your project, collaborate with your team, and manage everything from script to screen.
                                     </p>
 
                                     <div className="space-y-3 mb-6">
                                         <div className="flex items-center space-x-2 text-sm">
                                             <FileText className="w-4 h-4 text-muted-foreground" />
-                                            <span>Interactive reading experience</span>
+                                            <span>Script-to-screen project management</span>
                                         </div>
                                         <div className="flex items-center space-x-2 text-sm">
                                             <Star className="w-4 h-4 text-muted-foreground" />
-                                            <span>Get detailed feedback</span>
+                                            <span>Get feedback from collaborators</span>
                                         </div>
                                         <div className="flex items-center space-x-2 text-sm">
                                             <Users className="w-4 h-4 text-muted-foreground" />
-                                            <span>Join script discussions</span>
+                                            <span>Build your production team</span>
                                         </div>
                                     </div>
 
                                     <Button className="w-full group-hover:bg-primary/90 transition-colors">
                                         <FileText className="w-4 h-4 mr-2" />
-                                        Upload Screenplay
+                                        Start Project
                                     </Button>
                                 </CardContent>
                             </Link>

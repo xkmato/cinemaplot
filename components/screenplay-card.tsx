@@ -79,7 +79,7 @@ export default function ScreenplayCard({ screenplay }: ScreenplayCardProps) {
                     {/* Action Button */}
                     <Button className="w-full" asChild>
                         <Link href={`/screenplays/${screenplay.id}`}>
-                            Read Screenplay
+                            View Project
                         </Link>
                     </Button>
                 </div>

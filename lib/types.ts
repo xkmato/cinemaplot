@@ -22,6 +22,11 @@ export interface Event {
   trailerUrl?: string; // YouTube trailer URL
   tags?: string[]; // Event tags/categories
   followers?: string[]; // Array of user IDs who are following the event
+  
+  // Audition-specific properties
+  type?: 'general' | 'audition'; // Event type
+  screenplayId?: string; // Reference to the screenplay/project (for auditions)
+  auditionRoles?: AuditionRole[]; // Roles available for audition
 }
 
 export interface User {
@@ -201,4 +206,87 @@ export interface ScreenplayDiscussion {
   pageNumber?: number; // If tied to specific page
   tags?: string[]; // Discussion tags like "character-development", "plot", "dialogue"
   totalComments?: number;
+}
+
+// Audition and Tape Types
+export interface AuditionRole {
+  id: string;
+  roleName: string; // e.g., "SARAH", "JOHN", "BARISTA"
+  description?: string; // Role description
+  pageRanges: PageRange[]; // Which pages/scenes this role should read
+  requirements?: string; // Age range, gender, specific requirements
+  numberOfSlots?: number; // How many actors are needed for this role
+  status?: 'open' | 'closed' | 'filled'; // Audition status for this role
+}
+
+export interface PageRange {
+  startPage: number;
+  endPage: number;
+  description?: string; // e.g., "Coffee shop scene", "Emotional monologue"
+}
+
+export interface AuditionTape {
+  id: string;
+  auditionEventId: string; // Reference to the audition event
+  screenplayId: string; // Reference to the screenplay/project
+  roleId: string; // Which role they're auditioning for
+  submitterId: string; // User ID of person submitting
+  submitterName: string;
+  submitterEmail?: string;
+  tapeUrl: string; // Link to audition video
+  notes?: string; // Actor's notes about their submission
+  submittedAt: string; // ISO string
+  
+  // Review status
+  status: 'submitted' | 'reviewed' | 'shortlisted' | 'accepted' | 'rejected';
+  reviewNotes?: string; // Project owner's notes
+  reviewedAt?: string; // When it was reviewed
+  reviewedBy?: string; // User ID of reviewer
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  screenplayId: string; // Reference to the main screenplay
+  creatorId: string;
+  creatorName: string;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Project status and phase
+  status: 'development' | 'pre-production' | 'production' | 'post-production' | 'completed' | 'on-hold';
+  phase: 'script-development' | 'casting' | 'crew-assembly' | 'pre-production' | 'filming' | 'post-production' | 'distribution';
+  
+  // Project details
+  genre?: string;
+  estimatedBudget?: string;
+  targetCompletionDate?: string;
+  location?: string;
+  
+  // Team and collaboration
+  teamMembers?: ProjectMember[];
+  auditions?: string[]; // Array of audition event IDs
+  
+  // Visibility and permissions
+  visibility?: 'private' | 'public' | 'team-only';
+  deleted?: boolean;
+  paused?: boolean;
+}
+
+export interface ProjectMember {
+  userId: string;
+  userName: string;
+  role: string; // e.g., "Director", "Producer", "Cinematographer"
+  permissions: ProjectPermissions;
+  joinedAt: string;
+}
+
+export interface ProjectPermissions {
+  canEditProject: boolean;
+  canManageTeam: boolean;
+  canCreateAuditions: boolean;
+  canReviewTapes: boolean;
+  canEditScript: boolean;
+  canViewAnalytics: boolean;
 }

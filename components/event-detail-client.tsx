@@ -1,5 +1,8 @@
 'use client';
 
+import AddAuditionRoles from "@/components/add-audition-roles";
+import AuditionTapeManager from "@/components/audition-tape-manager";
+import SubmitAuditionTape from "@/components/submit-audition-tape";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,10 +12,10 @@ import { useAppContext } from "@/lib/auth-context";
 import { appId, db } from "@/lib/firebase";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { generateEventStructuredData } from "@/lib/seo";
-import { Event } from "@/lib/types";
+import { AuditionRole, Event } from "@/lib/types";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { doc, getDoc } from "firebase/firestore";
-import { Bell, Calendar, DollarSign, ExternalLink, Heart, MapPin, MessageCircle, Share2, Users } from "lucide-react";
+import { Bell, Calendar, Clapperboard, DollarSign, Heart, MapPin, MessageCircle, Plus, Share2, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -23,7 +26,7 @@ interface EventDetailClientProps {
 }
 
 export default function EventDetailClient({ eventId }: EventDetailClientProps) {
-    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments } = useAppContext();
+    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments, updateEvent } = useAppContext();
     const [showComments, setShowComments] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [singleEvent, setSingleEvent] = useState<Event | null>(null);
@@ -31,6 +34,9 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
     const [eventNotFound, setEventNotFound] = useState(false);
     const [commentText, setCommentText] = useState("");
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+    const [showSubmitTapeModal, setShowSubmitTapeModal] = useState(false);
+    const [showTapeManagerModal, setShowTapeManagerModal] = useState(false);
+    const [showAddRolesModal, setShowAddRolesModal] = useState(false);
 
     // Effect to fetch single event when events list is empty and we have an eventId
     useEffect(() => {
@@ -127,6 +133,48 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         }
     };
 
+    const handleSubmitAuditionTape = async (submission: { roleId: string; tapeUrl: string; notes?: string }) => {
+        // TODO: Implement tape submission logic
+        console.log('Submitting audition tape:', submission);
+        // This would typically call an API to save the audition tape
+        alert('Audition tape submitted successfully!');
+        setShowSubmitTapeModal(false);
+    };
+
+    const handleUpdateTapeStatus = async (tapeId: string, status: 'submitted' | 'reviewed' | 'shortlisted' | 'accepted' | 'rejected', notes?: string) => {
+        // TODO: Implement tape status update logic  
+        console.log('Updating tape status:', { tapeId, status, notes });
+        // This would typically call an API to update the tape status
+        alert(`Tape status updated to ${status}`);
+    };
+
+    const handleAddRolesToAudition = async (eventId: string, newRoles: AuditionRole[]) => {
+        try {
+            // Get the current event to merge with existing roles
+            const currentEvent = events.find(event => event.id === eventId) || singleEvent;
+            if (!currentEvent) {
+                throw new Error('Audition event not found');
+            }
+
+            const existingRoles = currentEvent.auditionRoles || [];
+            const updatedRoles = [...existingRoles, ...newRoles];
+
+            await updateEvent(eventId, { auditionRoles: updatedRoles });
+
+            // Update local state
+            if (singleEvent) {
+                setSingleEvent(prev => prev ? { ...prev, auditionRoles: updatedRoles } : null);
+            }
+
+            // Close the modal after successful addition
+            setShowAddRolesModal(false);
+        } catch (error) {
+            console.error('Failed to add roles to audition:', error);
+            // Let the modal handle error display
+            throw error;
+        }
+    };
+
     // Show loading if we're still loading context or fetching a single event
     if (isLoading || isFetchingEvent) {
         return (
@@ -202,7 +250,6 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         location: currentEvent.location,
         price: currentEvent.price || "Free",
         followers: currentEvent.followers?.length || 0,
-        ticketingLink: currentEvent.eventLink || "https://eventbrite.com/tech-conf-2024",
         image: currentEvent.imageUrl || createPlaceholderDataUrl('event', currentEvent.title, 800, 400),
         organizer: {
             name: currentEvent.creatorName || "Event Organizer",
@@ -316,6 +363,109 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                     <h2 className="text-xl font-semibold mb-3">About This Event</h2>
                                     <p className="text-muted-foreground leading-relaxed">{eventData.description}</p>
                                 </div>
+
+                                {/* Audition Section - Only show for audition events */}
+                                {currentEvent.type === 'audition' && (
+                                    <div>
+                                        <h2 className="text-xl font-semibold mb-4 flex items-center">
+                                            <Clapperboard className="w-5 h-5 mr-2" />
+                                            Audition Information
+                                        </h2>
+
+                                        {currentEvent.auditionRoles && currentEvent.auditionRoles.length > 0 ? (
+                                            <div className="space-y-4">
+                                                <h3 className="font-medium">Available Roles</h3>
+                                                <div className="grid gap-4">
+                                                    {currentEvent.auditionRoles.map((role, index) => (
+                                                        <Card key={index} className="border-l-4 border-l-primary">
+                                                            <CardContent className="pt-4">
+                                                                <div className="flex items-start justify-between">
+                                                                    <div className="flex-1">
+                                                                        <h4 className="font-semibold text-lg">{role.roleName}</h4>
+                                                                        <p className="text-muted-foreground mb-2">{role.description}</p>
+                                                                        <div className="flex flex-wrap gap-2 text-sm">
+                                                                            {role.requirements && (
+                                                                                <Badge variant="outline">
+                                                                                    {role.requirements}
+                                                                                </Badge>
+                                                                            )}
+                                                                            {role.numberOfSlots && (
+                                                                                <Badge variant="outline">
+                                                                                    {role.numberOfSlots} slots
+                                                                                </Badge>
+                                                                            )}
+                                                                            {role.pageRanges && role.pageRanges.length > 0 && (
+                                                                                <Badge variant="outline">
+                                                                                    Pages: {role.pageRanges.map(range =>
+                                                                                        range.startPage === range.endPage
+                                                                                            ? `${range.startPage}`
+                                                                                            : `${range.startPage}-${range.endPage}`
+                                                                                    ).join(', ')}
+                                                                                </Badge>
+                                                                            )}
+                                                                            {role.status && (
+                                                                                <Badge variant={role.status === 'open' ? 'default' : role.status === 'filled' ? 'secondary' : 'outline'}>
+                                                                                    {role.status}
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </CardContent>
+                                                        </Card>
+                                                    ))}
+                                                </div>
+
+                                                {/* Action Buttons for Auditions */}
+                                                <div className="flex flex-wrap gap-3 pt-4">
+                                                    {user?.uid === currentEvent.creatorId ? (
+                                                        <>
+                                                            <Button
+                                                                onClick={() => setShowTapeManagerModal(true)}
+                                                                className="flex items-center"
+                                                            >
+                                                                <Users className="w-4 h-4 mr-2" />
+                                                                Manage Audition Tapes
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => setShowAddRolesModal(true)}
+                                                                className="flex items-center"
+                                                            >
+                                                                <Plus className="w-4 h-4 mr-2" />
+                                                                Add More Roles
+                                                            </Button>
+                                                        </>
+                                                    ) : (
+                                                        <Button
+                                                            onClick={() => setShowSubmitTapeModal(true)}
+                                                            className="flex items-center"
+                                                        >
+                                                            <Clapperboard className="w-4 h-4 mr-2" />
+                                                            Submit Audition Tape
+                                                        </Button>
+                                                    )}
+
+                                                    {currentEvent.screenplayId && (
+                                                        <Button variant="outline" asChild>
+                                                            <Link href={`/screenplays/${currentEvent.screenplayId}`}>
+                                                                View Full Script
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <Card>
+                                                <CardContent className="pt-4">
+                                                    <p className="text-muted-foreground text-center py-4">
+                                                        No audition roles have been defined for this event yet.
+                                                    </p>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* Tags */}
                                 {currentEvent.tags && currentEvent.tags.length > 0 && (
@@ -480,15 +630,6 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                             )}
                                         </Button>
 
-                                        {eventData.ticketingLink && (
-                                            <Button className="w-full bg-transparent" variant="outline" asChild>
-                                                <a href={eventData.ticketingLink} target="_blank" rel="noopener noreferrer">
-                                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                                    Get Tickets
-                                                </a>
-                                            </Button>
-                                        )}
-
                                         <Button className="w-full bg-transparent" variant="outline" onClick={() => setShowShareModal(true)}>
                                             <Share2 className="w-4 h-4 mr-2" />
                                             Share Event
@@ -535,6 +676,36 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Submit Audition Tape Modal */}
+            {showSubmitTapeModal && currentEvent.type === 'audition' && currentEvent.auditionRoles && (
+                <SubmitAuditionTape
+                    auditionEvent={currentEvent}
+                    roles={currentEvent.auditionRoles}
+                    onSubmit={handleSubmitAuditionTape}
+                    onClose={() => setShowSubmitTapeModal(false)}
+                />
+            )}
+
+            {/* Audition Tape Manager Modal */}
+            {showTapeManagerModal && currentEvent.type === 'audition' && user?.uid === currentEvent.creatorId && (
+                <AuditionTapeManager
+                    auditionEvent={currentEvent}
+                    tapes={[]} // TODO: Load actual tapes from state/API
+                    roles={currentEvent.auditionRoles || []}
+                    onUpdateTapeStatus={handleUpdateTapeStatus}
+                    canReview={true}
+                />
+            )}
+
+            {/* Add Audition Roles Modal */}
+            {showAddRolesModal && currentEvent.type === 'audition' && user?.uid === currentEvent.creatorId && (
+                <AddAuditionRoles
+                    event={currentEvent}
+                    onClose={() => setShowAddRolesModal(false)}
+                    onAddRoles={handleAddRolesToAudition}
+                />
+            )}
 
             {/* Share Modal */}
             {showShareModal && (

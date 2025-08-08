@@ -818,7 +818,7 @@ export default function UserProfilePage() {
                                                 <p className="text-muted-foreground">No screenplays yet.</p>
                                                 {isOwnProfile && (
                                                     <Button className="mt-4" asChild>
-                                                        <Link href="/screenplays/create">Create Your First Screenplay</Link>
+                                                        <Link href="/screenplays/create">Start Your First Project</Link>
                                                     </Button>
                                                 )}
                                             </div>

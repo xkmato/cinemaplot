@@ -328,13 +328,13 @@ For questions, suggestions, or support:
 - [x] Add movies, movie discussions, and reviews
 - [x] Add screenplays and screenplay discussions
 - [x] Movie premiere events with trailer support
-- [ ] Advanced event filtering and search
+- [x] Advanced event filtering and search
 
 ### Coming Soon
 
-- [ ] User profiles
+- [x] User profiles
 - [ ] Verified professional film reviewers
-- [ ] Launch auditions from screenplays, including accepting audition tapes directly on the platform
+- [x] Launch auditions from screenplays, including accepting audition tapes directly on the platform
 - [ ] Multiple screenplay projects (TV series, web series)
 
 ### Coming Up Later
