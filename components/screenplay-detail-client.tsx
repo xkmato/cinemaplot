@@ -496,6 +496,96 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                                     </div>
                                 </CardContent>
                             </Card>
+
+                            {/* Public Auditions Section - Show to everyone */}
+                            {auditionsForThisScreenplay.length > 0 && (
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center">
+                                            <Users className="w-5 h-5 mr-2" />
+                                            Auditions for this Project
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            {auditionsForThisScreenplay.map(audition => (
+                                                <div key={audition.id} className="p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium text-lg mb-2">{audition.title}</h4>
+                                                            {audition.description && (
+                                                                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                                                                    {audition.description}
+                                                                </p>
+                                                            )}
+                                                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                                                <div className="flex items-center gap-1">
+                                                                    <Calendar className="w-4 h-4" />
+                                                                    {new Date(audition.date).toLocaleDateString()}
+                                                                </div>
+                                                                {audition.time && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span>•</span>
+                                                                        <span>{audition.time}</span>
+                                                                    </div>
+                                                                )}
+                                                                {audition.location && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span>•</span>
+                                                                        <span>{audition.location}</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {audition.auditionRoles && audition.auditionRoles.length > 0 && (
+                                                                <div className="mb-3">
+                                                                    <div className="text-sm font-medium mb-2">
+                                                                        Casting for {audition.auditionRoles.length} role{audition.auditionRoles.length !== 1 ? 's' : ''}:
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {audition.auditionRoles.slice(0, 5).map((role, index) => (
+                                                                            <Badge key={index} variant="secondary" className="text-xs">
+                                                                                {role.roleName}
+                                                                            </Badge>
+                                                                        ))}
+                                                                        {audition.auditionRoles.length > 5 && (
+                                                                            <Badge variant="outline" className="text-xs">
+                                                                                +{audition.auditionRoles.length - 5} more
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-2 mt-3">
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            asChild
+                                                            className="flex-1 sm:flex-none"
+                                                        >
+                                                            <Link href={`/events/${audition.id}`}>
+                                                                View Audition Details
+                                                            </Link>
+                                                        </Button>
+                                                        {audition.screenplayId && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                asChild
+                                                            >
+                                                                <Link href={`/screenplays/${audition.screenplayId}?eventId=${audition.id}`}>
+                                                                    Read Audition Material
+                                                                </Link>
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
 
                         {/* Sidebar */}

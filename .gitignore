@@ -43,3 +43,5 @@ next-env.d.ts
 bkp/
 .firebase/
 .firebaserc
+
+firebase-debug.log
