@@ -448,7 +448,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
                                                     {currentEvent.screenplayId && (
                                                         <Button variant="outline" asChild>
-                                                            <Link href={`/screenplays/${currentEvent.screenplayId}`}>
+                                                            <Link href={`/screenplays/${currentEvent.screenplayId}?eventId=${currentEvent.id}`}>
                                                                 View Full Script
                                                             </Link>
                                                         </Button>

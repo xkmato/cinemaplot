@@ -76,6 +76,7 @@ interface AppContextType {
     removeCollaborator: (screenplayId: string, userId: string) => Promise<void>;
     updateCollaboratorPermissions: (screenplayId: string, userId: string, permissions: ScreenplayPermissions) => Promise<void>;
     hasScreenplayAccess: (screenplay: Screenplay) => boolean;
+    hasAuditionPageAccess: (screenplay: Screenplay, pageNumber: number, eventId?: string) => Promise<boolean>;
     getScreenplayPermissions: (screenplay: Screenplay) => ScreenplayPermissions | null;
     refreshUserProfile: () => Promise<void>;
 }
@@ -841,6 +842,44 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return false;
     };
 
+    const hasAuditionPageAccess = async (screenplay: Screenplay, pageNumber: number, eventId?: string): Promise<boolean> => {
+        // If user has full screenplay access, they can access any page
+        if (hasScreenplayAccess(screenplay)) return true;
+
+        // For private screenplays, check if this page is accessible through auditions
+        if (screenplay.visibility === 'private' || !screenplay.isPublic) {
+            try {
+                // Get all audition events for this screenplay
+                const auditionEvents = events.filter(event =>
+                    event.type === 'audition' &&
+                    event.screenplayId === screenplay.id
+                );
+
+                // If specific eventId is provided, only check that event
+                const eventsToCheck = eventId
+                    ? auditionEvents.filter(event => event.id === eventId)
+                    : auditionEvents;
+
+                // Check if the page is included in any audition role's page ranges
+                for (const event of eventsToCheck) {
+                    if (event.auditionRoles) {
+                        for (const role of event.auditionRoles) {
+                            for (const pageRange of role.pageRanges) {
+                                if (pageNumber >= pageRange.startPage && pageNumber <= pageRange.endPage) {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking audition page access:', error);
+            }
+        }
+
+        return false;
+    };
+
     const getScreenplayPermissions = (screenplay: Screenplay): ScreenplayPermissions | null => {
         if (!user || !hasScreenplayAccess(screenplay)) return null;
 
@@ -1248,6 +1287,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         removeCollaborator,
         updateCollaboratorPermissions,
         hasScreenplayAccess,
+        hasAuditionPageAccess,
         getScreenplayPermissions,
         refreshUserProfile,
     };

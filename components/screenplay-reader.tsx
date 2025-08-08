@@ -13,6 +13,7 @@ import {
     ChevronRight,
     Download,
     Expand,
+    Eye,
     MessageCircle,
     Minimize,
     RefreshCw,
@@ -22,6 +23,7 @@ import React, { useCallback, useRef, useState } from 'react';
 
 interface ScreenplayReaderProps {
     screenplay: Screenplay;
+    eventId?: string;
 }
 
 interface Selection {
@@ -32,8 +34,8 @@ interface Selection {
     text: string;
 }
 
-export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) {
-    const { user, submitScreenplayComment, retryScreenplayProcessing, hasScreenplayAccess, getScreenplayPermissions } = useAppContext();
+export default function ScreenplayReader({ screenplay, eventId }: ScreenplayReaderProps) {
+    const { user, submitScreenplayComment, retryScreenplayProcessing, hasScreenplayAccess, hasAuditionPageAccess, getScreenplayPermissions } = useAppContext();
     const [currentPage, setCurrentPage] = useState(0);
     const [selectedText, setSelectedText] = useState<Selection | null>(null);
     const [showCommentModal, setShowCommentModal] = useState(false);
@@ -43,7 +45,13 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [pageRestored, setPageRestored] = useState(false);
     const [hasLoadedSavedPage, setHasLoadedSavedPage] = useState(false);
+    const [auditionAccessiblePages, setAuditionAccessiblePages] = useState<Set<number>>(new Set());
+    const [isLoadingAuditionAccess, setIsLoadingAuditionAccess] = useState(false);
     const pageRef = useRef<HTMLDivElement>(null);
+
+    // Check if user has access to this screenplay
+    const hasFullAccess = hasScreenplayAccess(screenplay);
+    const isAuditionMode = !hasFullAccess && eventId && auditionAccessiblePages.size > 0;
 
     // Reset page loading state when screenplay changes
     React.useEffect(() => {
@@ -92,6 +100,39 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
             localStorage.setItem(`screenplay-page-${screenplay.id}`, currentPage.toString());
         }
     }, [currentPage, screenplay.id, hasLoadedSavedPage]);
+
+    // Load audition accessible pages when in audition mode
+    React.useEffect(() => {
+        const loadAuditionAccess = async () => {
+            // Only check if user doesn't have full access and we're in audition mode
+            if (hasScreenplayAccess(screenplay) || !eventId || !screenplay.content) {
+                return;
+            }
+
+            setIsLoadingAuditionAccess(true);
+            const accessiblePages = new Set<number>();
+
+            // Check each page for audition access
+            for (let i = 0; i < screenplay.content.length; i++) {
+                const hasAccess = await hasAuditionPageAccess(screenplay, i + 1, eventId);
+                if (hasAccess) {
+                    accessiblePages.add(i);
+                }
+            }
+
+            setAuditionAccessiblePages(accessiblePages);
+            setIsLoadingAuditionAccess(false);
+
+            // If we're in audition mode and the current page isn't accessible, 
+            // navigate to the first accessible page
+            if (accessiblePages.size > 0 && !accessiblePages.has(currentPage)) {
+                const firstAccessiblePage = Math.min(...Array.from(accessiblePages));
+                setCurrentPage(firstAccessiblePage);
+            }
+        };
+
+        loadAuditionAccess();
+    }, [screenplay, eventId, hasScreenplayAccess, hasAuditionPageAccess, currentPage]);
 
     // Handle text selection - moved to top level to avoid conditional hook
     const handleMouseUp = useCallback(() => {
@@ -148,33 +189,64 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
     const goToPreviousPage = React.useCallback(() => {
         setCurrentPage(prev => {
             if (prev > 0) {
+                const newPage = prev - 1;
+                // In audition mode, check if the new page is accessible
+                if (isAuditionMode && !auditionAccessiblePages.has(newPage)) {
+                    // Find the previous accessible page
+                    for (let i = newPage; i >= 0; i--) {
+                        if (auditionAccessiblePages.has(i)) {
+                            setSelectedText(null);
+                            setSelectionPosition(null);
+                            if (pageRef.current) {
+                                pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            return i;
+                        }
+                    }
+                    return prev; // No accessible previous page found
+                }
                 setSelectedText(null);
                 setSelectionPosition(null);
-                // Scroll to top when changing pages
                 if (pageRef.current) {
                     pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                return prev - 1;
+                return newPage;
             }
             return prev;
         });
-    }, []);
+    }, [isAuditionMode, auditionAccessiblePages]);
 
     const goToNextPage = React.useCallback(() => {
         setCurrentPage(prev => {
             const totalPages = screenplay.content?.length || 0;
             if (prev < totalPages - 1) {
+                const newPage = prev + 1;
+                // In audition mode, check if the new page is accessible
+                if (isAuditionMode && !auditionAccessiblePages.has(newPage)) {
+                    // Find the next accessible page
+                    for (let i = newPage; i < totalPages; i++) {
+                        if (auditionAccessiblePages.has(i)) {
+                            setSelectedText(null);
+                            setSelectionPosition(null);
+                            if (pageRef.current) {
+                                pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                            return i;
+                        }
+                    }
+                    return prev; // No accessible next page found
+                }
                 setSelectedText(null);
                 setSelectionPosition(null);
                 // Scroll to top when changing pages
                 if (pageRef.current) {
                     pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                return prev + 1;
+                return newPage;
             }
             return prev;
         });
-    }, [screenplay.content]);
+    }, [screenplay.content, isAuditionMode, auditionAccessiblePages]);
 
     // Handle keyboard shortcuts
     React.useEffect(() => {
@@ -213,8 +285,8 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isFullscreen, goToPreviousPage, goToNextPage]);
 
-    // Check if user has access to this screenplay
-    if (!hasScreenplayAccess(screenplay)) {
+    // Check access conditions
+    if (!hasFullAccess && !isAuditionMode && !isLoadingAuditionAccess) {
         return (
             <Card className="max-w-4xl mx-auto">
                 <CardHeader>
@@ -243,8 +315,40 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
         );
     }
 
+    // Show loading state while checking audition access
+    if (!hasFullAccess && isLoadingAuditionAccess) {
+        return (
+            <Card className="max-w-4xl mx-auto">
+                <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <BookOpen className="w-6 h-6 mr-2" />
+                        Loading...
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="text-center py-8">
+                        <div className="text-blue-600 mb-4">
+                            <RefreshCw className="w-12 h-12 mx-auto mb-2 animate-spin" />
+                            <p className="font-medium mb-2">Checking Access</p>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Verifying your access to audition materials...
+                            </p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
     // Get user's permissions for this screenplay
-    const permissions = getScreenplayPermissions(screenplay);
+    const permissions = hasFullAccess ? getScreenplayPermissions(screenplay) : {
+        canRead: true, // Limited to accessible pages only
+        canComment: false, // No commenting in audition mode
+        canHighlight: false, // No highlighting in audition mode
+        canDownload: false, // No downloading in audition mode
+        canInvite: false,
+        canEdit: false
+    };
 
     // Check if screenplay has processed content
     if (!screenplay.content || screenplay.content.length === 0) {
@@ -553,6 +657,31 @@ export default function ScreenplayReader({ screenplay }: ScreenplayReaderProps) 
                         </div>
                     </CardHeader>
                 </Card>
+
+                {/* Audition Mode Banner */}
+                {isAuditionMode && (
+                    <Card className="mb-4 border-blue-200 bg-blue-50">
+                        <CardContent className="p-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <div className="flex items-center text-blue-700">
+                                        <Eye className="w-4 h-4 mr-2" />
+                                        <span className="font-medium text-sm">Audition Access</span>
+                                    </div>
+                                    <Badge variant="outline" className="ml-2 text-xs border-blue-300 text-blue-700">
+                                        Limited Pages
+                                    </Badge>
+                                </div>
+                                <div className="text-xs text-blue-600">
+                                    {auditionAccessiblePages.size} pages available
+                                </div>
+                            </div>
+                            <p className="text-xs text-blue-600 mt-1">
+                                You have access to specific pages for audition purposes only.
+                            </p>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Selection Actions - Popup over selected text */}
                 {selectedText && user && selectionPosition && permissions?.canComment && (

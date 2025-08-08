@@ -13,6 +13,7 @@ import { useAppContext } from "@/lib/auth-context";
 import { AuditionRole, Event, Screenplay, ScreenplayComment } from "@/lib/types";
 import { Calendar, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 interface ScreenplayDetailClientProps {
@@ -21,6 +22,8 @@ interface ScreenplayDetailClientProps {
 
 export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetailClientProps) {
     const { user, screenplays, events, createEvent, updateEvent, screenplayComments, submitScreenplayComment, retryScreenplayProcessing } = useAppContext();
+    const searchParams = useSearchParams();
+    const eventId = searchParams.get('eventId');
     const [screenplay, setScreenplay] = useState<Screenplay | null>(null);
     const [comments, setComments] = useState<ScreenplayComment[]>([]);
     const [newComment, setNewComment] = useState("");
@@ -258,7 +261,7 @@ export default function ScreenplayDetailClient({ screenplayId }: ScreenplayDetai
                             {/* Screenplay Reader/Viewer */}
                             {screenplay.isProcessed && screenplay.content ? (
                                 // Use interactive reader for processed screenplays
-                                <ScreenplayReader screenplay={screenplay} />
+                                <ScreenplayReader screenplay={screenplay} eventId={eventId || undefined} />
                             ) : (
                                 // Fall back to PDF viewer for unprocessed screenplays
                                 <Card>
