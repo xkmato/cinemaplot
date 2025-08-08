@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { AuditionRole, Event, Screenplay, ScreenplayComment } from "@/lib/types";
-import { Calendar, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users, Edit } from "lucide-react";
+import { Calendar, Edit, FileText, Globe, Lock, MessageCircle, Plus, RefreshCw, Settings, Share2, Star, User, Users } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";

@@ -47,14 +47,14 @@ export default function EditScreenplayPage({ params }: EditScreenplayPageProps) 
     // Load screenplay data
     useEffect(() => {
         if (!screenplayId) return;
-        
+
         const foundScreenplay = screenplays.find(s => s.id === screenplayId);
         if (foundScreenplay) {
             if (foundScreenplay.authorId !== user?.uid) {
                 router.push(`/screenplays/${screenplayId}`);
                 return;
             }
-            
+
             setScreenplay(foundScreenplay);
             setTitle(foundScreenplay.title || "");
             setLogLine(foundScreenplay.logLine || "");

@@ -11,8 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { Movie } from "@/lib/types";
 import { Film, Play, X } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -51,14 +51,14 @@ export default function EditMoviePage({ params }: EditMoviePageProps) {
     // Load movie data
     useEffect(() => {
         if (!movieId) return;
-        
+
         const foundMovie = movies.find(m => m.id === movieId);
         if (foundMovie) {
             if (foundMovie.creatorId !== user?.uid) {
                 router.push(`/movies/${movieId}`);
                 return;
             }
-            
+
             setMovie(foundMovie);
             setTitle(foundMovie.title || "");
             setLogLine(foundMovie.logLine || "");

@@ -15,7 +15,7 @@ import { generateEventStructuredData } from "@/lib/seo";
 import { AuditionRole, Event } from "@/lib/types";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { doc, getDoc } from "firebase/firestore";
-import { Bell, Calendar, Clapperboard, DollarSign, Heart, MapPin, MessageCircle, Plus, Share2, Users, Edit } from "lucide-react";
+import { Bell, Calendar, Clapperboard, DollarSign, Edit, Heart, MapPin, MessageCircle, Plus, Share2, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";

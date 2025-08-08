@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppContext } from "@/lib/auth-context";
 import { Event } from "@/lib/types";
 import { Calendar, MapPin, X } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -56,14 +56,14 @@ export default function EditEventPage({ params }: EditEventPageProps) {
     // Load event data
     useEffect(() => {
         if (!eventId) return;
-        
+
         const foundEvent = events.find(e => e.id === eventId);
         if (foundEvent) {
             if (foundEvent.creatorId !== user?.uid) {
                 router.push(`/events/${eventId}`);
                 return;
             }
-            
+
             setEvent(foundEvent);
             setTitle(foundEvent.title || "");
             setDescription(foundEvent.description || "");
