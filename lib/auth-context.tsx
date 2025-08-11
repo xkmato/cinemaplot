@@ -27,6 +27,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
+import { getFullName } from "./helpers";
 import { Comment, Event, Movie, Review, Screenplay, ScreenplayComment, ScreenplayHighlight, ScreenplayPermissions, User } from "./types";
 
 interface AuthMessage {
@@ -227,7 +228,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             ...eventData,
             imageUrl,
             creatorId: user.uid,
-            creatorName: user.displayName || 'Unknown',
+            creatorName: getFullName(user),
             createdAt: new Date().toISOString(),
             timezone: userTimezone,
             dateTime: eventDateTime.toISOString(),
@@ -319,7 +320,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             ...movieData,
             imageUrl,
             creatorId: user.uid,
-            creatorName: user.displayName || 'Unknown',
+            creatorName: getFullName(user),
             createdAt: new Date().toISOString(),
         };
 
@@ -369,7 +370,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             fileName: pdfFile.name,
             fileSize: pdfFile.size,
             authorId: user.uid,
-            creatorName: user.displayName || 'Unknown',
+            creatorName: getFullName(user),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             viewCount: 0,
@@ -748,7 +749,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const reviewData = {
             movieId,
             userId: user.uid,
-            userName: user.displayName || 'Anonymous',
+            userName: getFullName(user),
             userAvatar: '', // TODO: Add user avatar support
             rating,
             comment: comment || '',
@@ -795,7 +796,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const commentData = {
             eventId,
             userId: user.uid,
-            userName: user.displayName || 'Anonymous',
+            userName: getFullName(user),
             userAvatar: '', // TODO: Add user avatar support
             content,
             createdAt: new Date().toISOString(),
@@ -836,7 +837,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const commentData = {
             screenplayId,
             userId: user.uid,
-            userName: user.displayName || 'Anonymous',
+            userName: getFullName(user),
             userAvatar: '', // TODO: Add user avatar support
             content,
             createdAt: new Date().toISOString(),
@@ -916,7 +917,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             id: Date.now().toString(),
             screenplayId,
             invitedBy: user.uid,
-            invitedByName: user.displayName || 'Unknown',
+            invitedByName: getFullName(user),
             invitedEmail: email,
             status: 'pending' as const,
             permissions,
@@ -1104,6 +1105,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                             uid: currentUser.uid,
                             email: currentUser.email,
                             displayName: profileData?.displayName || currentUser.displayName,
+                            firstName: profileData?.firstName || null,
+                            lastName: profileData?.lastName || null,
                             username: profileData?.username || null
                         });
                         setNeedsNameToProceed(false);
@@ -1124,6 +1127,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                                     uid: currentUser.uid,
                                     email: currentUser.email,
                                     displayName: currentUser.displayName,
+                                    firstName: null,
+                                    lastName: null,
                                     username: null
                                 });
                                 setNeedsNameToProceed(false);
@@ -1134,6 +1139,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                                     uid: currentUser.uid,
                                     email: currentUser.email,
                                     displayName: currentUser.displayName,
+                                    firstName: null,
+                                    lastName: null,
                                     username: null
                                 });
                                 setNeedsNameToProceed(false);
@@ -1144,6 +1151,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                                 uid: currentUser.uid,
                                 email: currentUser.email,
                                 displayName: null,
+                                firstName: null,
+                                lastName: null,
                                 username: null
                             });
                             setNeedsNameToProceed(true);
@@ -1156,6 +1165,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                         uid: currentUser.uid,
                         email: currentUser.email,
                         displayName: currentUser.displayName,
+                        firstName: null,
+                        lastName: null,
                         username: null
                     });
                     setNeedsNameToProceed(!currentUser.displayName);
@@ -1382,6 +1393,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 setUser(prev => prev ? {
                     ...prev,
                     displayName: profileData?.displayName || prev.displayName,
+                    firstName: profileData?.firstName || null,
+                    lastName: profileData?.lastName || null,
                     username: profileData?.username || null
                 } : null);
             }

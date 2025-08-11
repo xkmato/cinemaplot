@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
-import { isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
+import { getFullName, isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { Play, Star } from "lucide-react";
@@ -140,7 +140,7 @@ export default function HomePage() {
               {user ? (
                 <>
                   <span className="text-sm text-muted-foreground hidden sm:block">
-                    Welcome, <Link href={user?.username ? `/${user.username}` : (user?.uid ? `/profile/${user.uid}` : '#')} className="underline hover:text-primary">{user.displayName || 'User'}</Link>
+                    Welcome, <Link href={user?.username ? `/${user.username}` : (user?.uid ? `/profile/${user.uid}` : '#')} className="underline hover:text-primary">{getFullName(user)}</Link>
                   </span>
                   <Button variant="ghost" size="sm" onClick={handleLogout}>
                     Sign Out

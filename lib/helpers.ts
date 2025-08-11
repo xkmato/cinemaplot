@@ -1,5 +1,29 @@
 import { Event } from './types';
 
+// User name formatting
+export const getFullName = (user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+}): string => {
+  // If we have first or last name, use them
+  if (user.firstName || user.lastName) {
+    return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+  }
+  
+  // Fallback to displayName
+  return user.displayName || 'User';
+};
+
+// Get display name for various contexts (cards, lists, etc.)
+export const getDisplayName = (user: {
+  firstName?: string | null;
+  lastName?: string | null;
+  displayName?: string | null;
+}): string => {
+  return getFullName(user);
+};
+
 // Fountain file validation
 export const validateFountainFile = async (file: File): Promise<{ isValid: boolean; error?: string }> => {
     // Check file extension

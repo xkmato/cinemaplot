@@ -40,6 +40,8 @@ import React from "react";
 interface UserProfile {
     uid: string;
     displayName?: string;
+    firstName?: string;
+    lastName?: string;
     email?: string;
     username?: string;
     bio?: string;
@@ -106,6 +108,8 @@ export default function UsernameProfilePage() {
     const [profile, setProfile] = React.useState<UserProfile>({
         uid: profileUid || '',
         displayName: '',
+        firstName: '',
+        lastName: '',
         email: '',
         username: '',
         bio: '',
@@ -170,6 +174,8 @@ export default function UsernameProfilePage() {
                         ...prev,
                         uid: profileUid,
                         displayName: data.displayName || user?.displayName || '',
+                        firstName: data.firstName || '',
+                        lastName: data.lastName || '',
                         email: data.email || user?.email || '',
                         username: data.username || '',
                         bio: data.bio || '',
@@ -185,6 +191,8 @@ export default function UsernameProfilePage() {
                     // Initialize profile for new users
                     const initialProfile = {
                         displayName: user?.displayName || '',
+                        firstName: '',
+                        lastName: '',
                         email: user?.email || '',
                         joinedAt: new Date().toISOString()
                     };
@@ -251,7 +259,18 @@ export default function UsernameProfilePage() {
             return;
         }
 
-        const success = await saveProfile({ [field]: value });
+        // Prepare the update object
+        const updateData: Partial<UserProfile> = { [field]: value };
+
+        // If updating firstName or lastName, also update displayName
+        if (field === 'firstName' || field === 'lastName') {
+            const newFirstName = field === 'firstName' ? value as string : profile.firstName;
+            const newLastName = field === 'lastName' ? value as string : profile.lastName;
+            const newDisplayName = `${newFirstName || ''} ${newLastName || ''}`.trim();
+            updateData.displayName = newDisplayName || profile.displayName; // Keep existing displayName if no names
+        }
+
+        const success = await saveProfile(updateData);
         if (success) {
             setEditingField(null);
             setTempValues({});
@@ -392,10 +411,81 @@ export default function UsernameProfilePage() {
                                     </div>
 
                                     <div className="w-full">
-                                        {/* Display Name */}
-                                        <h1 className="text-2xl font-bold mb-2">
-                                            {profile.displayName || "User"}
-                                        </h1>
+                                        {/* First and Last Name */}
+                                        <div className="mb-2">
+                                            {editingField === 'firstName' ? (
+                                                <div className="space-y-2">
+                                                    <Input
+                                                        type="text"
+                                                        value={tempValues.firstName || ''}
+                                                        onChange={e => setTempValues(prev => ({ ...prev, firstName: e.target.value }))}
+                                                        placeholder="First name"
+                                                        className="text-center"
+                                                    />
+                                                    <div className="flex gap-2 justify-center">
+                                                        <Button size="sm" onClick={() => handleSaveField('firstName')}>
+                                                            <Save className="w-3 h-3 mr-1" /> Save
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                                                            <X className="w-3 h-3 mr-1" /> Cancel
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : editingField === 'lastName' ? (
+                                                <div className="space-y-2">
+                                                    <Input
+                                                        type="text"
+                                                        value={tempValues.lastName || ''}
+                                                        onChange={e => setTempValues(prev => ({ ...prev, lastName: e.target.value }))}
+                                                        placeholder="Last name"
+                                                        className="text-center"
+                                                    />
+                                                    <div className="flex gap-2 justify-center">
+                                                        <Button size="sm" onClick={() => handleSaveField('lastName')}>
+                                                            <Save className="w-3 h-3 mr-1" /> Save
+                                                        </Button>
+                                                        <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
+                                                            <X className="w-3 h-3 mr-1" /> Cancel
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    <h1 className="text-2xl font-bold flex items-center justify-center gap-2">
+                                                        <span>
+                                                            {profile.firstName || profile.lastName
+                                                                ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim()
+                                                                : profile.displayName || "User"
+                                                            }
+                                                        </span>
+                                                        {isOwnProfile && (
+                                                            <div className="flex gap-1">
+                                                                <Button size="sm" variant="ghost" onClick={() => handleEditField('firstName')} title="Edit first name">
+                                                                    <Edit3 className="w-3 h-3" />
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    </h1>
+                                                    {isOwnProfile && (
+                                                        <div className="flex justify-center gap-2 text-xs text-muted-foreground">
+                                                            <button
+                                                                onClick={() => handleEditField('firstName')}
+                                                                className="hover:underline cursor-pointer"
+                                                            >
+                                                                Edit first name
+                                                            </button>
+                                                            <span>•</span>
+                                                            <button
+                                                                onClick={() => handleEditField('lastName')}
+                                                                className="hover:underline cursor-pointer"
+                                                            >
+                                                                Edit last name
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
 
                                         {/* Username - show as read-only since this is the username route */}
                                         <div className="mb-4">
