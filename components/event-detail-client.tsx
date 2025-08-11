@@ -35,7 +35,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
     const [commentText, setCommentText] = useState("");
     const [isSubmittingComment, setIsSubmittingComment] = useState(false);
     const [showSubmitTapeModal, setShowSubmitTapeModal] = useState(false);
-    const [showTapeManagerModal, setShowTapeManagerModal] = useState(false);
+    const [showTapeManager, setShowTapeManager] = useState(false);
     const [showAddRolesModal, setShowAddRolesModal] = useState(false);
 
     // Effect to fetch single event when events list is empty and we have an eventId
@@ -429,7 +429,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                                     {user?.uid === currentEvent.creatorId ? (
                                                         <>
                                                             <Button
-                                                                onClick={() => setShowTapeManagerModal(true)}
+                                                                onClick={() => setShowTapeManager(true)}
                                                                 className="flex items-center"
                                                             >
                                                                 <Users className="w-4 h-4 mr-2" />
@@ -486,6 +486,25 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                                 </Badge>
                                             ))}
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Audition Tape Manager - Only show for audition events when user is creator and manager is open */}
+                                {currentEvent.type === 'audition' && user?.uid === currentEvent.creatorId && showTapeManager && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-xl font-semibold">Manage Audition Tapes</h2>
+                                            <Button variant="outline" size="sm" onClick={() => setShowTapeManager(false)}>
+                                                Hide Manager
+                                            </Button>
+                                        </div>
+                                        <AuditionTapeManager
+                                            auditionEvent={currentEvent}
+                                            tapes={[]} // TODO: Load actual tapes from state/API
+                                            roles={currentEvent.auditionRoles || []}
+                                            onUpdateTapeStatus={handleUpdateTapeStatus}
+                                            canReview={true}
+                                        />
                                     </div>
                                 )}
 
@@ -692,17 +711,6 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                     roles={currentEvent.auditionRoles}
                     onSubmit={handleSubmitAuditionTape}
                     onClose={() => setShowSubmitTapeModal(false)}
-                />
-            )}
-
-            {/* Audition Tape Manager Modal */}
-            {showTapeManagerModal && currentEvent.type === 'audition' && user?.uid === currentEvent.creatorId && (
-                <AuditionTapeManager
-                    auditionEvent={currentEvent}
-                    tapes={[]} // TODO: Load actual tapes from state/API
-                    roles={currentEvent.auditionRoles || []}
-                    onUpdateTapeStatus={handleUpdateTapeStatus}
-                    canReview={true}
                 />
             )}
 
