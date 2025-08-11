@@ -602,10 +602,26 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                                     })}
                                                 </div>
                                                 <div className="text-sm text-muted-foreground">
-                                                    {new Date(eventData.date).toLocaleTimeString("en-US", {
-                                                        hour: "numeric",
-                                                        minute: "2-digit",
-                                                    })}
+                                                    {(() => {
+                                                        // Priority: use dateTime if available, then combine date + time, then fallback to date only
+                                                        let displayDate: Date;
+
+                                                        if (currentEvent.dateTime) {
+                                                            // Use the complete dateTime ISO string
+                                                            displayDate = new Date(currentEvent.dateTime);
+                                                        } else if (currentEvent.time) {
+                                                            // Combine date and time
+                                                            displayDate = new Date(`${currentEvent.date}T${currentEvent.time}`);
+                                                        } else {
+                                                            // Fallback to date only
+                                                            displayDate = new Date(currentEvent.date);
+                                                        }
+
+                                                        return displayDate.toLocaleTimeString("en-US", {
+                                                            hour: "numeric",
+                                                            minute: "2-digit",
+                                                        });
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
