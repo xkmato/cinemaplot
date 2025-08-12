@@ -33,6 +33,11 @@ export interface WelcomeEmailData {
 
 export async function sendWelcomeEmail(userData: WelcomeEmailData): Promise<boolean> {
   try {
+    console.log('Attempting to send welcome email to:', userData.email);
+    console.log('Environment check - MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'Set' : 'Missing');
+    console.log('Environment check - MAILGUN_DOMAIN:', process.env.MAILGUN_DOMAIN || 'Missing');
+    console.log('Environment check - MAILGUN_FROM_EMAIL:', process.env.MAILGUN_FROM_EMAIL || 'Missing');
+    
     const client = getMailgunClient();
     const domain = process.env.MAILGUN_DOMAIN!;
     const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
@@ -47,7 +52,7 @@ export async function sendWelcomeEmail(userData: WelcomeEmailData): Promise<bool
     const textContent = createWelcomeEmailText(name, userData.username);
 
     const messageData = {
-      from: `CinemaPlot Team <${fromEmail}>`,
+      from: fromEmail,
       to: userData.email,
       subject: 'Welcome to CinemaPlot! 🎬',
       text: textContent,
@@ -58,12 +63,23 @@ export async function sendWelcomeEmail(userData: WelcomeEmailData): Promise<bool
       'o:tracking-opens': true,
     };
 
+    console.log('Sending email with data:', { 
+      from: messageData.from, 
+      to: messageData.to, 
+      subject: messageData.subject,
+      domain 
+    });
+
     const response = await client.messages.create(domain, messageData);
     
     console.log('Welcome email sent successfully:', response.id);
     return true;
   } catch (error) {
-    console.error('Failed to send welcome email:', error);
+    console.error('Failed to send welcome email - detailed error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
     return false;
   }
 }

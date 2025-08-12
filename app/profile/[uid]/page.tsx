@@ -532,7 +532,7 @@ export default function UserProfilePage() {
                                             )}
                                             {!profile.username && isOwnProfile && (
                                                 <div className="text-xs text-muted-foreground mt-1">
-                                                    <p>Set a username to get a custom URL like: yoursite.com/yourname</p>
+                                                    <p>Set a username to get a custom URL like: cinemaplot.com/yourname</p>
                                                 </div>
                                             )}
                                         </div>

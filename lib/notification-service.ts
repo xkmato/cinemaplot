@@ -1,53 +1,25 @@
 import { addDoc, collection, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
 import { db } from "./firebase";
-import { Notification, NotificationType } from "./types";
-
-const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
+import { Notification } from "./types";
 
 export class NotificationService {
   // Create a new notification
-  static async createNotification(
-    userId: string, // Recipient
-    type: NotificationType,
-    title: string,
-    message: string,
-    entityType: 'event' | 'movie' | 'screenplay',
-    entityId: string,
-    entityTitle: string,
-    actionUserId?: string, // User who performed the action
-    actionUserName?: string
-  ): Promise<void> {
-    try {
-      const notificationData = {
-        userId,
-        type,
-        title,
-        message,
-        entityType,
-        entityId,
-        entityTitle,
-        actionUserId,
-        actionUserName,
-        isRead: false,
-        createdAt: serverTimestamp(),
-      };
+  static async createNotification(notificationData: Omit<Notification, 'id' | 'createdAt'>): Promise<string> {
+    console.log('🔔 Creating notification:', notificationData);
+    const notification = {
+      ...notificationData,
+      createdAt: new Date().toISOString(),
+    };
 
-      await addDoc(
-        collection(db, `artifacts/${appId}/public/data/notifications`),
-        notificationData
-      );
-
-      console.log(`Notification created for user ${userId}: ${title}`);
-    } catch (error) {
-      console.error("Error creating notification:", error);
-      throw error;
-    }
+    const docRef = await addDoc(collection(db, 'notifications'), notification);
+    console.log('🔔 Notification created with ID:', docRef.id);
+    return docRef.id;
   }
 
   // Mark notification as read
   static async markAsRead(notificationId: string): Promise<void> {
     try {
-      const notificationRef = doc(db, `artifacts/${appId}/public/data/notifications`, notificationId);
+      const notificationRef = doc(db, 'notifications', notificationId);
       await updateDoc(notificationRef, {
         isRead: true,
         readAt: serverTimestamp(),
@@ -71,33 +43,24 @@ export class NotificationService {
   }
 
   // Subscribe to notifications for a user
-  static subscribeToUserNotifications(
-    userId: string,
-    callback: (notifications: Notification[]) => void
-  ): () => void {
+  static subscribeToUserNotifications(userId: string, callback: (notifications: Notification[]) => void): () => void {
+    console.log('🔔 Setting up notification subscription for user:', userId);
+    
     const q = query(
-      collection(db, `artifacts/${appId}/public/data/notifications`),
-      where("userId", "==", userId),
-      orderBy("createdAt", "desc")
+      collection(db, 'notifications'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
     );
 
-    return onSnapshot(
-      q,
-      (querySnapshot) => {
-        const notifications = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          // Convert Firestore timestamps to ISO strings
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString() || doc.data().createdAt,
-          readAt: doc.data().readAt?.toDate?.()?.toISOString() || doc.data().readAt,
-        } as Notification));
-        callback(notifications);
-      },
-      (error) => {
-        console.error("Error fetching notifications:", error);
-        callback([]);
-      }
-    );
+    return onSnapshot(q, (snapshot) => {
+      const notifications: Notification[] = [];
+      snapshot.forEach((doc) => {
+        notifications.push({ id: doc.id, ...doc.data() } as Notification);
+      });
+      console.log('🔔 Received notifications from Firebase:', notifications);
+      console.log('🔔 Number of notifications:', notifications.length);
+      callback(notifications);
+    });
   }
 
   // Get unread count for a user
@@ -106,7 +69,7 @@ export class NotificationService {
     callback: (count: number) => void
   ): () => void {
     const q = query(
-      collection(db, `artifacts/${appId}/public/data/notifications`),
+      collection(db, 'notifications'),
       where("userId", "==", userId),
       where("isRead", "==", false)
     );
@@ -134,17 +97,18 @@ export class NotificationService {
     // Don't notify if user follows their own event
     if (eventCreatorId === followerUserId) return;
 
-    await this.createNotification(
-      eventCreatorId,
-      'event_followed',
-      'New Event Follower',
-      `${followerUserName} is now following your event "${eventTitle}"`,
-      'event',
-      eventId,
-      eventTitle,
-      followerUserId,
-      followerUserName
-    );
+    await this.createNotification({
+      userId: eventCreatorId,
+      type: 'event_followed',
+      title: 'New Event Follower',
+      message: `${followerUserName} is now following your event "${eventTitle}"`,
+      entityType: 'event',
+      entityId: eventId,
+      entityTitle: eventTitle,
+      actionUserId: followerUserId,
+      actionUserName: followerUserName,
+      isRead: false
+    });
   }
 
   static async notifyEventComment(
@@ -162,17 +126,18 @@ export class NotificationService {
       ? commentContent.substring(0, 50) + "..."
       : commentContent;
 
-    await this.createNotification(
-      eventCreatorId,
-      'event_comment',
-      'New Event Comment',
-      `${commenterUserName} commented on your event "${eventTitle}": ${truncatedComment}`,
-      'event',
-      eventId,
-      eventTitle,
-      commenterUserId,
-      commenterUserName
-    );
+    await this.createNotification({
+      userId: eventCreatorId,
+      type: 'event_comment',
+      title: 'New Event Comment',
+      message: `${commenterUserName} commented on your event "${eventTitle}": ${truncatedComment}`,
+      entityType: 'event',
+      entityId: eventId,
+      entityTitle: eventTitle,
+      actionUserId: commenterUserId,
+      actionUserName: commenterUserName,
+      isRead: false
+    });
   }
 
   static async notifyAuditionTapeSubmitted(
@@ -186,17 +151,18 @@ export class NotificationService {
     // Don't notify if creator submits to their own audition
     if (eventCreatorId === submitterUserId) return;
 
-    await this.createNotification(
-      eventCreatorId,
-      'audition_tape_submitted',
-      'New Audition Tape',
-      `${submitterUserName} submitted an audition tape for the role "${roleName}" in "${eventTitle}"`,
-      'event',
-      eventId,
-      eventTitle,
-      submitterUserId,
-      submitterUserName
-    );
+    await this.createNotification({
+      userId: eventCreatorId,
+      type: 'audition_tape_submitted',
+      title: 'New Audition Tape',
+      message: `${submitterUserName} submitted an audition tape for the role "${roleName}" in "${eventTitle}"`,
+      entityType: 'event',
+      entityId: eventId,
+      entityTitle: eventTitle,
+      actionUserId: submitterUserId,
+      actionUserName: submitterUserName,
+      isRead: false
+    });
   }
 
   static async notifyMovieRated(
@@ -210,17 +176,18 @@ export class NotificationService {
     // Don't notify if user rates their own movie
     if (movieCreatorId === raterUserId) return;
 
-    await this.createNotification(
-      movieCreatorId,
-      'movie_rated',
-      'New Movie Rating',
-      `${raterUserName} gave your movie "${movieTitle}" ${rating} star${rating !== 1 ? 's' : ''}`,
-      'movie',
-      movieId,
-      movieTitle,
-      raterUserId,
-      raterUserName
-    );
+    await this.createNotification({
+      userId: movieCreatorId,
+      type: 'movie_rated',
+      title: 'New Movie Rating',
+      message: `${raterUserName} gave your movie "${movieTitle}" ${rating} star${rating !== 1 ? 's' : ''}`,
+      entityType: 'movie',
+      entityId: movieId,
+      entityTitle: movieTitle,
+      actionUserId: raterUserId,
+      actionUserName: raterUserName,
+      isRead: false
+    });
   }
 
   static async notifyMovieReviewed(
@@ -239,17 +206,18 @@ export class NotificationService {
       ? `${reviewerUserName} reviewed your movie "${movieTitle}" with ${rating} star${rating !== 1 ? 's' : ''} and left a comment`
       : `${reviewerUserName} reviewed your movie "${movieTitle}" with ${rating} star${rating !== 1 ? 's' : ''}`;
 
-    await this.createNotification(
-      movieCreatorId,
-      'movie_reviewed',
-      'New Movie Review',
-      message,
-      'movie',
-      movieId,
-      movieTitle,
-      reviewerUserId,
-      reviewerUserName
-    );
+    await this.createNotification({
+      userId: movieCreatorId,
+      type: 'movie_reviewed',
+      title: 'New Movie Review',
+      message: message,
+      entityType: 'movie',
+      entityId: movieId,
+      entityTitle: movieTitle,
+      actionUserId: reviewerUserId,
+      actionUserName: reviewerUserName,
+      isRead: false
+    });
   }
 
   static async notifyScreenplayComment(
@@ -267,16 +235,17 @@ export class NotificationService {
       ? commentContent.substring(0, 50) + "..."
       : commentContent;
 
-    await this.createNotification(
-      screenplayAuthorId,
-      'screenplay_commented',
-      'New Screenplay Comment',
-      `${commenterUserName} commented on your screenplay "${screenplayTitle}": ${truncatedComment}`,
-      'screenplay',
-      screenplayId,
-      screenplayTitle,
-      commenterUserId,
-      commenterUserName
-    );
+    await this.createNotification({
+      userId: screenplayAuthorId,
+      type: 'screenplay_commented',
+      title: 'New Screenplay Comment',
+      message: `${commenterUserName} commented on your screenplay "${screenplayTitle}": ${truncatedComment}`,
+      entityType: 'screenplay',
+      entityId: screenplayId,
+      entityTitle: screenplayTitle,
+      actionUserId: commenterUserId,
+      actionUserName: commenterUserName,
+      isRead: false
+    });
   }
 }

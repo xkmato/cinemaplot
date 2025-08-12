@@ -5,12 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuItem,
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppContext } from "@/lib/auth-context";
 import { NotificationService } from "@/lib/notification-service";
 import { Notification } from "@/lib/types";
@@ -28,9 +26,12 @@ export default function NotificationBell() {
     useEffect(() => {
         if (!user?.uid) return;
 
+        console.log('Setting up notification subscriptions for user:', user.uid);
+
         const unsubscribeNotifications = NotificationService.subscribeToUserNotifications(
             user.uid,
             (notifications) => {
+                console.log('Received notifications:', notifications);
                 setNotifications(notifications);
             }
         );
@@ -38,6 +39,7 @@ export default function NotificationBell() {
         const unsubscribeUnreadCount = NotificationService.subscribeToUnreadCount(
             user.uid,
             (count) => {
+                console.log('Received unread count:', count);
                 setUnreadCount(count);
             }
         );
@@ -137,76 +139,78 @@ export default function NotificationBell() {
                         No notifications yet
                     </div>
                 ) : (
-                    <ScrollArea className="h-80">
-                        {notifications.slice(0, 20).map((notification) => (
-                            <DropdownMenuItem key={notification.id} className="p-0" asChild>
-                                <Link
-                                    href={getEntityPath(notification)}
-                                    onClick={() => {
-                                        if (!notification.isRead) {
-                                            NotificationService.markAsRead(notification.id);
-                                        }
-                                        setIsOpen(false);
-                                    }}
-                                    className="block p-3 hover:bg-muted/50 border-b border-border/50"
-                                >
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <p className={`text-sm font-medium ${!notification.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                                    {notification.title}
+                    <div className="max-h-80 overflow-y-auto">
+                        <div className="space-y-0">
+                            {notifications.slice(0, 20).map((notification) => (
+                                <div key={notification.id} className="relative">
+                                    <Link
+                                        href={getEntityPath(notification)}
+                                        onClick={() => {
+                                            if (!notification.isRead) {
+                                                NotificationService.markAsRead(notification.id);
+                                            }
+                                            setIsOpen(false);
+                                        }}
+                                        className="block p-3 hover:bg-muted/50 border-b border-border/50 relative"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1 space-y-1 pr-2">
+                                                <div className="flex items-center justify-between">
+                                                    <p className={`text-sm font-medium ${!notification.isRead ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                        {notification.title}
+                                                    </p>
+                                                    {!notification.isRead && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={(e) => handleMarkAsRead(notification.id, e)}
+                                                            className="h-auto p-1 ml-2 shrink-0"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                                    {notification.message}
                                                 </p>
-                                                {!notification.isRead && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={(e) => handleMarkAsRead(notification.id, e)}
-                                                        className="h-auto p-1 ml-2"
-                                                    >
-                                                        <Check className="w-3 h-3" />
-                                                    </Button>
-                                                )}
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatTimeAgo(notification.createdAt)}
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">
-                                                {notification.message}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {formatTimeAgo(notification.createdAt)}
-                                            </p>
                                         </div>
-                                    </div>
-                                    {!notification.isRead && (
-                                        <div className="absolute left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-primary rounded-full" />
-                                    )}
-                                </Link>
-                            </DropdownMenuItem>
-                        ))}
+                                        {!notification.isRead && (
+                                            <div className="absolute left-1 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-primary rounded-full" />
+                                        )}
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
                         {notifications.length > 20 && (
-                            <DropdownMenuItem asChild>
+                            <div className="border-t">
                                 <Link
                                     href="/notifications"
-                                    className="text-center p-3 text-sm text-primary hover:text-primary-dark"
+                                    className="block text-center p-3 text-sm text-primary hover:text-primary/80 hover:bg-muted/20"
                                     onClick={() => setIsOpen(false)}
                                 >
                                     View all notifications
                                 </Link>
-                            </DropdownMenuItem>
+                            </div>
                         )}
-                    </ScrollArea>
+                    </div>
                 )}
 
                 {notifications.length > 0 && (
                     <>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
+                        <div className="p-0">
                             <Link
                                 href="/notifications"
-                                className="text-center p-3 text-sm text-primary hover:text-primary-dark"
+                                className="block text-center p-3 text-sm text-primary hover:text-primary/80 hover:bg-muted/20"
                                 onClick={() => setIsOpen(false)}
                             >
                                 View all notifications
                             </Link>
-                        </DropdownMenuItem>
+                        </div>
                     </>
                 )}
             </DropdownMenuContent>

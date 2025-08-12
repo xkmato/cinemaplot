@@ -6,8 +6,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { email, firstName, displayName, username } = body;
 
+    console.log('Welcome email API called with:', { email, firstName, displayName, username });
+
     // Validate required fields
     if (!email) {
+      console.log('Email validation failed - no email provided');
       return NextResponse.json(
         { error: 'Email is required' },
         { status: 400 }
@@ -17,6 +20,7 @@ export async function POST(request: NextRequest) {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
+      console.log('Email validation failed - invalid format:', email);
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }
@@ -30,14 +34,17 @@ export async function POST(request: NextRequest) {
       username,
     };
 
+    console.log('Calling sendWelcomeEmail with:', emailData);
     const success = await sendWelcomeEmail(emailData);
 
     if (success) {
+      console.log('Welcome email sent successfully for:', email);
       return NextResponse.json(
         { message: 'Welcome email sent successfully' },
         { status: 200 }
       );
     } else {
+      console.log('sendWelcomeEmail returned false for:', email);
       return NextResponse.json(
         { error: 'Failed to send welcome email' },
         { status: 500 }
