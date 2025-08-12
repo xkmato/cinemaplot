@@ -3,6 +3,7 @@
 import AuthScreen from "@/components/auth-screen";
 import EventCard from "@/components/event-card";
 import GetUserNameModal from "@/components/get-user-name-modal";
+import NotificationBell from "@/components/notification-bell";
 import ScreenplayCard from "@/components/screenplay-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ export default function HomePage() {
             <div className="flex items-center space-x-2">
               {user ? (
                 <>
+                  <NotificationBell />
                   <span className="text-sm text-muted-foreground hidden sm:block">
                     Welcome, <Link href={user?.username ? `/${user.username}` : (user?.uid ? `/profile/${user.uid}` : '#')} className="underline hover:text-primary">{getFullName(user)}</Link>
                   </span>

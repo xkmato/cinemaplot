@@ -26,7 +26,7 @@ interface EventDetailClientProps {
 }
 
 export default function EventDetailClient({ eventId }: EventDetailClientProps) {
-    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments, updateEvent } = useAppContext();
+    const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments, updateEvent, submitAuditionTape, getEventAuditionTapes, updateAuditionTapeStatus } = useAppContext();
     const [showComments, setShowComments] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [singleEvent, setSingleEvent] = useState<Event | null>(null);
@@ -133,19 +133,30 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
         }
     };
 
-    const handleSubmitAuditionTape = async (submission: { roleId: string; tapeUrl: string; notes?: string }) => {
-        // TODO: Implement tape submission logic
-        console.log('Submitting audition tape:', submission);
-        // This would typically call an API to save the audition tape
-        alert('Audition tape submitted successfully!');
-        setShowSubmitTapeModal(false);
+    const handleSubmitAuditionTape = async (submission: { roleId: string; tapeUrl: string; notes?: string; submitterName: string; submitterEmail?: string }) => {
+        if (!singleEvent) {
+            alert('Event not found');
+            return;
+        }
+
+        try {
+            await submitAuditionTape(singleEvent.id, submission);
+            alert('Audition tape submitted successfully!');
+            setShowSubmitTapeModal(false);
+        } catch (error) {
+            console.error('Failed to submit audition tape:', error);
+            alert('Failed to submit audition tape. Please try again.');
+        }
     };
 
     const handleUpdateTapeStatus = async (tapeId: string, status: 'submitted' | 'reviewed' | 'shortlisted' | 'accepted' | 'rejected', notes?: string) => {
-        // TODO: Implement tape status update logic  
-        console.log('Updating tape status:', { tapeId, status, notes });
-        // This would typically call an API to update the tape status
-        alert(`Tape status updated to ${status}`);
+        try {
+            await updateAuditionTapeStatus(tapeId, status, notes);
+            alert(`Tape status updated to ${status}`);
+        } catch (error) {
+            console.error('Failed to update tape status:', error);
+            alert('Failed to update tape status. Please try again.');
+        }
     };
 
     const handleAddRolesToAudition = async (eventId: string, newRoles: AuditionRole[]) => {
@@ -500,10 +511,10 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
                                         </div>
                                         <AuditionTapeManager
                                             auditionEvent={currentEvent}
-                                            tapes={[]} // TODO: Load actual tapes from state/API
+                                            tapes={getEventAuditionTapes(currentEvent.id)}
                                             roles={currentEvent.auditionRoles || []}
                                             onUpdateTapeStatus={handleUpdateTapeStatus}
-                                            canReview={true}
+                                            canReview={user?.uid === currentEvent.creatorId}
                                         />
                                     </div>
                                 )}

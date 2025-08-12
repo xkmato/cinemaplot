@@ -292,3 +292,28 @@ export interface ProjectPermissions {
   canEditScript: boolean;
   canViewAnalytics: boolean;
 }
+
+// Notification Types
+export type NotificationType = 
+  | 'event_followed'
+  | 'event_comment'
+  | 'audition_tape_submitted'
+  | 'movie_rated'
+  | 'movie_reviewed'
+  | 'screenplay_commented';
+
+export interface Notification {
+  id: string;
+  userId: string; // User who will receive this notification
+  type: NotificationType;
+  title: string;
+  message: string;
+  entityType: 'event' | 'movie' | 'screenplay';
+  entityId: string; // ID of the event, movie, or screenplay
+  entityTitle: string; // Title of the entity for display
+  actionUserId?: string; // User who performed the action (optional)
+  actionUserName?: string; // Name of user who performed the action
+  isRead: boolean;
+  createdAt: string; // ISO string
+  readAt?: string; // ISO string
+}

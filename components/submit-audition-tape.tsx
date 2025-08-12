@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAppContext } from "@/lib/auth-context";
+import { getFullName } from "@/lib/helpers";
 import { AuditionRole, Event, PageRange } from "@/lib/types";
 import { Calendar, Clock, ExternalLink, FileText, MapPin, Send, User, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SubmitAuditionTapeProps {
     auditionEvent: Event;
@@ -31,6 +33,7 @@ export default function SubmitAuditionTape({
     onSubmit,
     onClose
 }: SubmitAuditionTapeProps) {
+    const { user } = useAppContext();
     const [formData, setFormData] = useState<TapeSubmission>({
         roleId: '',
         tapeUrl: '',
@@ -40,6 +43,17 @@ export default function SubmitAuditionTape({
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
+
+    // Auto-populate user data if logged in
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                submitterName: getFullName(user) || '',
+                submitterEmail: user.email || ''
+            }));
+        }
+    }, [user]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

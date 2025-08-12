@@ -26,9 +26,12 @@ import {
 } from "firebase/firestore";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { sendCollaborationInviteEmail } from "./email-service";
 import { analytics, appId, auth, db, isFirebaseConfigured, storage } from "./firebase";
 import { getFullName } from "./helpers";
-import { Comment, Event, Movie, Review, Screenplay, ScreenplayComment, ScreenplayHighlight, ScreenplayPermissions, User } from "./types";
+import { NotificationService } from "./notification-service";
+import { AuditionTape, Comment, Event, Movie, Review, Screenplay, ScreenplayComment, ScreenplayHighlight, ScreenplayPermissions, User } from "./types";
+import { hasWelcomeEmailBeenSent, markWelcomeEmailSent, triggerWelcomeEmail } from "./welcome-email-helpers";
 
 interface AuthMessage {
     type: 'success' | 'error';
@@ -43,6 +46,7 @@ interface AppContextType {
     reviews: Review[];
     comments: Comment[];
     screenplayComments: ScreenplayComment[];
+    auditionTapes: AuditionTape[];
     isLoading: boolean;
     isAuthReady: boolean;
     needsNameToProceed: boolean;
@@ -82,6 +86,9 @@ interface AppContextType {
     hasAuditionPageAccess: (screenplay: Screenplay, pageNumber: number, eventId?: string) => Promise<boolean>;
     getScreenplayPermissions: (screenplay: Screenplay) => ScreenplayPermissions | null;
     refreshUserProfile: () => Promise<void>;
+    submitAuditionTape: (eventId: string, submission: { roleId: string; tapeUrl: string; notes?: string; submitterName: string; submitterEmail?: string }) => Promise<void>;
+    getEventAuditionTapes: (eventId: string) => AuditionTape[];
+    updateAuditionTapeStatus: (tapeId: string, status: AuditionTape['status'], notes?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -108,6 +115,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [comments, setComments] = useState<Comment[]>([]);
     const [screenplayComments, setScreenplayComments] = useState<ScreenplayComment[]>([]);
+    const [auditionTapes, setAuditionTapes] = useState<AuditionTape[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [email, setEmail] = useState("");
     const [authMessage, setAuthMessage] = useState<AuthMessage | null>(null);
@@ -194,6 +202,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             // Manually update user object in state for immediate UI feedback
             setUser((currentUser) => currentUser ? { ...currentUser, displayName: name } : null);
             setNeedsNameToProceed(false);
+
+            // Send welcome email for new users (only if not already sent)
+            if (user.email && !hasWelcomeEmailBeenSent(user.uid)) {
+                try {
+                    await triggerWelcomeEmail(user.email, null, name, null);
+                    markWelcomeEmailSent(user.uid);
+                } catch (error) {
+                    console.error("Failed to send welcome email:", error);
+                    // Don't fail the registration process if email fails
+                }
+            }
         } catch (error) {
             console.error("Failed to save user name:", error);
         }
@@ -702,6 +721,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             followers: arrayUnion(user.uid)
         });
 
+        // Create notification for event creator
+        const event = events.find(e => e.id === eventId);
+        if (event && event.creatorId !== user.uid) {
+            try {
+                await NotificationService.notifyEventFollowed(
+                    event.creatorId,
+                    eventId,
+                    event.title,
+                    user.uid,
+                    getFullName(user)
+                );
+            } catch (error) {
+                console.error('Error creating follow notification:', error);
+                // Don't fail the follow action if notification fails
+            }
+        }
+
         // Track event follow
         if (analytics) {
             analytics.then(analyticsInstance => {
@@ -768,6 +804,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             );
         }
 
+        // Create notification for movie creator (only for new reviews, not updates)
+        if (!existingReview) {
+            const movie = movies.find(m => m.id === movieId);
+            if (movie && movie.creatorId !== user.uid) {
+                try {
+                    await NotificationService.notifyMovieReviewed(
+                        movie.creatorId,
+                        movieId,
+                        movie.title,
+                        user.uid,
+                        getFullName(user),
+                        rating,
+                        !!comment
+                    );
+                } catch (error) {
+                    console.error('Error creating review notification:', error);
+                    // Don't fail the review submission if notification fails
+                }
+            }
+        }
+
         // Track review submission
         if (analytics) {
             analytics.then(analyticsInstance => {
@@ -806,6 +863,24 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             collection(db, `artifacts/${appId}/public/data/comments`),
             commentData
         );
+
+        // Create notification for event creator
+        const event = events.find(e => e.id === eventId);
+        if (event && event.creatorId !== user.uid) {
+            try {
+                await NotificationService.notifyEventComment(
+                    event.creatorId,
+                    eventId,
+                    event.title,
+                    user.uid,
+                    getFullName(user),
+                    content
+                );
+            } catch (error) {
+                console.error('Error creating comment notification:', error);
+                // Don't fail the comment submission if notification fails
+            }
+        }
 
         // Track comment submission
         if (analytics) {
@@ -860,6 +935,23 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             await updateDoc(screenplayDocRef, {
                 totalComments: (screenplay.totalComments || 0) + 1
             });
+
+            // Create notification for screenplay author
+            if (screenplay.authorId !== user.uid) {
+                try {
+                    await NotificationService.notifyScreenplayComment(
+                        screenplay.authorId,
+                        screenplayId,
+                        screenplay.title,
+                        user.uid,
+                        getFullName(user),
+                        content
+                    );
+                } catch (error) {
+                    console.error('Error creating screenplay comment notification:', error);
+                    // Don't fail the comment submission if notification fails
+                }
+            }
         }
 
         // Track screenplay comment submission
@@ -933,8 +1025,21 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             updatedAt: new Date().toISOString()
         });
 
-        // TODO: Send email notification to the invited user
-        console.log(`Invitation sent to ${email} for screenplay ${screenplay.title}`);
+        // Send email notification to the invited user
+        try {
+            const inviteLink = `${process.env.NEXT_PUBLIC_BASE_URL}/invitations/${invitation.id}`;
+            await sendCollaborationInviteEmail(
+                getFullName(user),
+                email,
+                screenplay.title,
+                inviteLink,
+                message
+            );
+            console.log(`Invitation email sent to ${email} for screenplay ${screenplay.title}`);
+        } catch (error) {
+            console.error('Failed to send invitation email:', error);
+            // Don't fail the invitation process if email fails
+        }
     };
 
     const removeCollaborator = async (screenplayId: string, userId: string) => {
@@ -1132,6 +1237,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                                     username: null
                                 });
                                 setNeedsNameToProceed(false);
+
+                                // Send welcome email for new Google users (only if not already sent)
+                                if (currentUser.email && !hasWelcomeEmailBeenSent(currentUser.uid)) {
+                                    try {
+                                        await triggerWelcomeEmail(currentUser.email, null, currentUser.displayName, null);
+                                        markWelcomeEmailSent(currentUser.uid);
+                                    } catch (error) {
+                                        console.error("Failed to send welcome email:", error);
+                                        // Don't fail the registration process if email fails
+                                    }
+                                }
                             } catch (error) {
                                 console.error('Error creating user profile:', error);
                                 // Fallback to basic user data from auth
@@ -1354,6 +1470,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return () => unsubscribe();
     }, [isAuthReady]);
 
+    // Fetch audition tapes from Firestore in real-time
+    useEffect(() => {
+        if (!isAuthReady) return;
+        const q = query(collection(db, `artifacts/${appId}/public/data/auditionTapes`));
+        const unsubscribe = onSnapshot(
+            q,
+            (querySnapshot) => {
+                const auditionTapesData = querySnapshot.docs.map((doc) => ({
+                    id: doc.id,
+                    ...doc.data(),
+                } as AuditionTape));
+                setAuditionTapes(auditionTapesData);
+            },
+            (error) => {
+                console.error("Error fetching audition tapes:", error);
+            }
+        );
+
+        return () => unsubscribe();
+    }, [isAuthReady]);
+
     // Update movie ratings based on reviews
     useEffect(() => {
         const updateMovieRatings = () => {
@@ -1403,6 +1540,105 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
     };
 
+    // Submit audition tape
+    const submitAuditionTape = async (
+        eventId: string,
+        submission: { roleId: string; tapeUrl: string; notes?: string; submitterName: string; submitterEmail?: string }
+    ) => {
+        if (!user) throw new Error('User must be authenticated to submit audition tapes');
+
+        const tapeData = {
+            auditionEventId: eventId,
+            screenplayId: '', // This should be set from the event data
+            roleId: submission.roleId,
+            submitterId: user.uid,
+            submitterName: submission.submitterName,
+            submitterEmail: submission.submitterEmail,
+            tapeUrl: submission.tapeUrl,
+            notes: submission.notes,
+            submittedAt: new Date().toISOString(),
+            status: 'submitted' as const,
+        };
+
+        // Get the event to find the screenplay ID and creator
+        const event = events.find(e => e.id === eventId);
+        if (!event) {
+            throw new Error('Audition event not found');
+        }
+
+        if (event.screenplayId) {
+            tapeData.screenplayId = event.screenplayId;
+        }
+
+        await addDoc(
+            collection(db, `artifacts/${appId}/public/data/auditionTapes`),
+            tapeData
+        );
+
+        // Create notification for event creator
+        if (event.creatorId !== user.uid) {
+            try {
+                const role = event.auditionRoles?.find(r => r.id === submission.roleId);
+                await NotificationService.notifyAuditionTapeSubmitted(
+                    event.creatorId,
+                    eventId,
+                    event.title,
+                    user.uid,
+                    submission.submitterName,
+                    role?.roleName || 'Unknown Role'
+                );
+            } catch (error) {
+                console.error('Error creating audition tape notification:', error);
+                // Don't fail the submission if notification fails
+            }
+        }
+
+        // Track audition tape submission
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "submit_audition_tape", {
+                        event_id: eventId,
+                        role_id: submission.roleId,
+                    });
+                }
+            });
+        }
+    };
+
+    // Get audition tapes for a specific event
+    const getEventAuditionTapes = (eventId: string): AuditionTape[] => {
+        return auditionTapes.filter(tape => tape.auditionEventId === eventId)
+            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+    };
+
+    // Update audition tape status
+    const updateAuditionTapeStatus = async (tapeId: string, status: AuditionTape['status'], notes?: string) => {
+        if (!user) throw new Error('User must be authenticated to update audition tape status');
+
+        const tapeDocRef = doc(db, `artifacts/${appId}/public/data/auditionTapes`, tapeId);
+        const updateData = {
+            status,
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: user.uid,
+            ...(notes && { reviewNotes: notes }),
+        };
+
+        await updateDoc(tapeDocRef, updateData);
+
+        // Track audition tape status update
+        if (analytics) {
+            analytics.then(analyticsInstance => {
+                if (analyticsInstance) {
+                    logEvent(analyticsInstance, "update_audition_tape_status", {
+                        tape_id: tapeId,
+                        new_status: status,
+                    });
+                }
+            });
+        }
+    };
+
     const contextValue: AppContextType = {
         user,
         events,
@@ -1411,6 +1647,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         reviews,
         comments,
         screenplayComments,
+        auditionTapes,
         isLoading,
         isAuthReady,
         needsNameToProceed,
@@ -1449,6 +1686,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         hasAuditionPageAccess,
         getScreenplayPermissions,
         refreshUserProfile,
+        submitAuditionTape,
+        getEventAuditionTapes,
+        updateAuditionTapeStatus,
     };
 
     return (
