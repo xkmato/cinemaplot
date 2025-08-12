@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast-provider";
 import { useAppContext } from "@/lib/auth-context";
 import { appId, db } from "@/lib/firebase";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
@@ -27,6 +28,7 @@ interface EventDetailClientProps {
 
 export default function EventDetailClient({ eventId }: EventDetailClientProps) {
     const { events, isLoading, followEvent, unfollowEvent, isFollowingEvent, user, submitComment, getEventComments, updateEvent, submitAuditionTape, getEventAuditionTapes, updateAuditionTapeStatus } = useAppContext();
+    const { showSuccess, showError } = useToast();
     const [showComments, setShowComments] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [singleEvent, setSingleEvent] = useState<Event | null>(null);
@@ -95,7 +97,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
     const handleFollowToggle = async () => {
         if (!user) {
-            alert('Please sign in to follow events');
+            showError('Sign in required', 'Please sign in to follow events');
             return;
         }
 
@@ -107,13 +109,13 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
             }
         } catch (error) {
             console.error('Error toggling follow status:', error);
-            alert('Something went wrong. Please try again.');
+            showError('Something went wrong', 'Please try again later.');
         }
     };
 
     const handleCommentSubmit = async () => {
         if (!user) {
-            alert('Please sign in to comment');
+            showError('Sign in required', 'Please sign in to comment');
             return;
         }
 
@@ -127,35 +129,35 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
             setCommentText("");
         } catch (error) {
             console.error('Error submitting comment:', error);
-            alert('Failed to submit comment. Please try again.');
+            showError('Failed to submit comment', 'Please try again later.');
         } finally {
             setIsSubmittingComment(false);
         }
     };
 
     const handleSubmitAuditionTape = async (submission: { roleId: string; tapeUrl: string; notes?: string; submitterName: string; submitterEmail?: string }) => {
-        if (!singleEvent) {
-            alert('Event not found');
+        if (!currentEvent) {
+            showError('Event not found', 'Unable to submit audition tape at this time.');
             return;
         }
 
         try {
-            await submitAuditionTape(singleEvent.id, submission);
-            alert('Audition tape submitted successfully!');
+            await submitAuditionTape(currentEvent.id, submission);
+            showSuccess('Audition tape submitted successfully!', 'Your audition tape has been received and will be reviewed soon.');
             setShowSubmitTapeModal(false);
         } catch (error) {
             console.error('Failed to submit audition tape:', error);
-            alert('Failed to submit audition tape. Please try again.');
+            showError('Failed to submit audition tape', 'Please try again later.');
         }
     };
 
     const handleUpdateTapeStatus = async (tapeId: string, status: 'submitted' | 'reviewed' | 'shortlisted' | 'accepted' | 'rejected', notes?: string) => {
         try {
             await updateAuditionTapeStatus(tapeId, status, notes);
-            alert(`Tape status updated to ${status}`);
+            showSuccess('Status updated', `Tape status updated to ${status}`);
         } catch (error) {
             console.error('Failed to update tape status:', error);
-            alert('Failed to update tape status. Please try again.');
+            showError('Failed to update tape status', 'Please try again later.');
         }
     };
 

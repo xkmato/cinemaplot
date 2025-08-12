@@ -1,3 +1,4 @@
+import { ToastProvider } from "@/components/ui/toast-provider";
 import { AppProvider } from "@/lib/auth-context";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -136,7 +137,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AppProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </AppProvider>
       </body>
     </html>

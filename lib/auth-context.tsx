@@ -1561,9 +1561,24 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         };
 
         // Get the event to find the screenplay ID and creator
-        const event = events.find(e => e.id === eventId);
+        // First try to find in the main events array
+        let event = events.find(e => e.id === eventId);
+
+        // If not found in the main events array, fetch it directly
         if (!event) {
-            throw new Error('Audition event not found');
+            try {
+                const eventDocRef = doc(db, `artifacts/${appId}/public/data/events`, eventId);
+                const eventDoc = await getDoc(eventDocRef);
+
+                if (eventDoc.exists()) {
+                    event = { id: eventDoc.id, ...eventDoc.data() } as Event;
+                } else {
+                    throw new Error('Audition event not found');
+                }
+            } catch (error) {
+                console.error('Error fetching event for audition tape submission:', error);
+                throw new Error('Audition event not found');
+            }
         }
 
         if (event.screenplayId) {
