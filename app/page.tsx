@@ -1,51 +1,27 @@
 'use client';
 
-import AuthScreen from "@/components/auth-screen";
 import EventCard from "@/components/event-card";
-import GetUserNameModal from "@/components/get-user-name-modal";
-import NotificationBell from "@/components/notification-bell";
 import ScreenplayCard from "@/components/screenplay-card";
+import SharedHeader from "@/components/shared-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppContext } from "@/lib/auth-context";
-import { getFullName, isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
+import { isEventLongerThanWeek, isEventUpcomingOrOngoing } from "@/lib/helpers";
 import { createPlaceholderDataUrl } from "@/lib/placeholder-svg";
 import { shouldUseUnoptimized } from "@/lib/utils";
 import { Play, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 
 export default function HomePage() {
-  const { user, events, movies, screenplays, isLoading, needsNameToProceed, handleNameSubmit, handleLogout } = useAppContext();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { events, movies, screenplays, isLoading } = useAppContext();
 
   // Get recent events for homepage (excluding events longer than a week)
   const recentEvents = events
     .filter(event => isEventUpcomingOrOngoing(event) && !isEventLongerThanWeek(event))
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 2);
-
-  // Calculate real statistics
-  const totalEvents = events.length;
-  const totalMovies = movies.length;
-  const totalPreprodProjects = screenplays.length;
-
-  // Calculate unique community members (creators + followers)
-  const allCreatorIds = new Set([
-    ...events.map(event => event.creatorId),
-    ...movies.map(movie => movie.creatorId),
-    ...screenplays.map(screenplay => screenplay.authorId)
-  ]);
-
-  const uniqueFollowerIds = new Set(
-    events.flatMap(event => event.followers || [])
-  );
-
-  // Combine creators and followers, removing duplicates
-  const allUniqueMembers = new Set([...allCreatorIds, ...uniqueFollowerIds]);
-  const totalCommunityMembers = allUniqueMembers.size;
 
   // Get featured movies (recent movies with good ratings, fallback to recent movies)
   const featuredMovies = (() => {
@@ -111,60 +87,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <Play className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold">CinemaPlot</span>
-            </div>
-            <nav className="hidden md:flex items-center space-x-6">
-              <Link href="/discover" className="text-sm font-medium hover:text-primary">
-                Discover
-              </Link>
-              <Link href="/events" className="text-sm font-medium hover:text-primary">
-                Events
-              </Link>
-              <Link href="/movies" className="text-sm font-medium hover:text-primary">
-                Movies
-              </Link>
-              <Link href="/screenplays" className="text-sm font-medium hover:text-primary">
-                Preproduction
-              </Link>
-              <Link href="/create" className="text-sm font-medium hover:text-primary">
-                Create
-              </Link>
-            </nav>
-            <div className="flex items-center space-x-2">
-              {user ? (
-                <>
-                  <NotificationBell />
-                  <span className="text-sm text-muted-foreground hidden sm:block">
-                    Welcome, <Link href={user?.username ? `/${user.username}` : (user?.uid ? `/profile/${user.uid}` : '#')} className="underline hover:text-primary">{getFullName(user)}</Link>
-                  </span>
-                  <Button variant="ghost" size="sm" onClick={handleLogout}>
-                    Sign Out
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/create">Create</Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAuthModal(true)}>
-                    Sign In
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/create">Get Started</Link>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <SharedHeader currentPage="home" />
 
       {/* Hero Section */}
       <section className="py-20 px-4">
@@ -184,30 +107,6 @@ export default function HomePage() {
             <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent" asChild>
               <Link href="/discover">Explore Content</Link>
             </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-muted/50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">{totalEvents}</div>
-              <div className="text-muted-foreground">Events Created</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">{totalMovies}</div>
-              <div className="text-muted-foreground">Films Shared</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">{totalPreprodProjects}</div>
-              <div className="text-muted-foreground">Preproduction Projects</div>
-            </div>
-            <div>
-              <div className="text-3xl font-bold text-primary mb-2">{totalCommunityMembers || 0}</div>
-              <div className="text-muted-foreground">Community Members</div>
-            </div>
           </div>
         </div>
       </section>
@@ -401,27 +300,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-
-      {/* Modals */}
-      {showAuthModal && !user && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="relative">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAuthModal(false)}
-              className="absolute -top-2 -right-2 h-8 w-8 p-0 bg-background rounded-full z-10"
-            >
-              ✕
-            </Button>
-            <AuthScreen />
-          </div>
-        </div>
-      )}
-
-      {user && needsNameToProceed && (
-        <GetUserNameModal onSubmit={handleNameSubmit} />
-      )}
     </div>
   );
 }

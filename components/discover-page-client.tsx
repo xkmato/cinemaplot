@@ -2,6 +2,7 @@
 
 import EventCard from "@/components/event-card";
 import MovieCard from "@/components/movie-card";
+import SharedHeader from "@/components/shared-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,38 +91,7 @@ export default function DiscoverPageClient() {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-background">
-                {/* Header */}
-                <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <div className="container mx-auto px-4 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-6">
-                                <Link href="/" className="flex items-center space-x-2">
-                                    <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                        <Play className="w-4 h-4 text-primary-foreground" />
-                                    </div>
-                                    <span className="text-xl font-bold">CinemaPlot</span>
-                                </Link>
-                                <nav className="hidden md:flex items-center space-x-6">
-                                    <Link href="/discover" className="text-sm font-medium text-primary">
-                                        Discover
-                                    </Link>
-                                    <Link href="/events" className="text-sm font-medium hover:text-primary">
-                                        Events
-                                    </Link>
-                                    <Link href="/movies" className="text-sm font-medium hover:text-primary">
-                                        Movies
-                                    </Link>
-                                </nav>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Button size="sm" asChild>
-                                    <Link href="/create">Create</Link>
-                                </Button>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
+                <SharedHeader currentPage="discover" />
                 <div className="container mx-auto px-4 py-8">
                     <div className="text-center">
                         <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -136,37 +106,7 @@ export default function DiscoverPageClient() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-6">
-                            <Link href="/" className="flex items-center space-x-2">
-                                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                    <Play className="w-4 h-4 text-primary-foreground" />
-                                </div>
-                                <span className="text-xl font-bold">CinemaPlot</span>
-                            </Link>
-                            <nav className="hidden md:flex items-center space-x-6">
-                                <Link href="/discover" className="text-sm font-medium text-primary">
-                                    Discover
-                                </Link>
-                                <Link href="/events" className="text-sm font-medium hover:text-primary">
-                                    Events
-                                </Link>
-                                <Link href="/movies" className="text-sm font-medium hover:text-primary">
-                                    Movies
-                                </Link>
-                            </nav>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button size="sm" asChild>
-                                <Link href="/create">Create</Link>
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <SharedHeader currentPage="discover" />
 
             <div className="container mx-auto px-4 py-8">
                 {/* Hero Section */}
