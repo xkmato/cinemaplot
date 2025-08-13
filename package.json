@@ -6,7 +6,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "notifications:setup": "./scripts/setup-daily-notifications.sh",
+    "notifications:test": "node scripts/test-notifications.js",
+    "notifications:stats": "node scripts/test-notifications.js stats",
+    "notifications:cron": "node scripts/test-notifications.js cron"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
