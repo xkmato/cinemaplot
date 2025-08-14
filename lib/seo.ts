@@ -157,7 +157,7 @@ export function generateEventStructuredData(event: Event) {
   const offers = {
     '@type': 'Offer',
     price: event.price && event.price !== 'Free' ? event.price.replace(/[^0-9.]/g, '') : '0',
-    priceCurrency: 'USD',
+    priceCurrency: 'UGX',
     availability: 'https://schema.org/InStock',
     url: event.eventLink || `${baseUrl}/events/${event.id}`,
     validFrom: event.createdAt || event.date,
