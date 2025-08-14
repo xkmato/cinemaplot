@@ -143,12 +143,33 @@ export function generateScreenplayMetadata(screenplay: Screenplay): Metadata {
 }
 
 export function generateEventStructuredData(event: Event) {
+  // Calculate end date
+  let endDate = event.date;
+  if (event.isMultiDay && event.numberOfDays && event.numberOfDays > 1) {
+    const startDate = new Date(event.date);
+    const calculatedEndDate = new Date(startDate.getTime() + (event.numberOfDays - 1) * 24 * 60 * 60 * 1000);
+    endDate = calculatedEndDate.toISOString().split('T')[0];
+  } else if (event.endDate) {
+    endDate = event.endDate;
+  }
+
+  // Create offers object - always include it, even for free events
+  const offers = {
+    '@type': 'Offer',
+    price: event.price && event.price !== 'Free' ? event.price.replace(/[^0-9.]/g, '') : '0',
+    priceCurrency: 'USD',
+    availability: 'https://schema.org/InStock',
+    url: event.eventLink || `${baseUrl}/events/${event.id}`,
+    validFrom: event.createdAt || event.date,
+  };
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: event.title,
     description: event.description || event.title,
     startDate: event.date,
+    endDate: endDate,
     location: {
       '@type': 'Place',
       name: event.location,
@@ -157,18 +178,18 @@ export function generateEventStructuredData(event: Event) {
     organizer: {
       '@type': 'Person',
       name: event.creatorName,
+      url: `${baseUrl}/profile/${event.creatorId}`,
+    },
+    performer: {
+      '@type': 'Person', 
+      name: event.creatorName,
+      url: `${baseUrl}/profile/${event.creatorId}`,
     },
     image: event.imageUrl || `${baseUrl}/social-preview.png`,
     url: `${baseUrl}/events/${event.id}`,
-    offers: event.price && event.price !== 'Free' ? {
-      '@type': 'Offer',
-      price: event.price,
-      priceCurrency: 'USD',
-      availability: 'https://schema.org/InStock',
-      url: event.eventLink || `${baseUrl}/events/${event.id}`,
-    } : undefined,
+    offers: offers,
     eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    eventAttendanceMode: event.eventLink ? 'https://schema.org/OnlineEventAttendanceMode' : 'https://schema.org/OfflineEventAttendanceMode',
   };
 }
 
