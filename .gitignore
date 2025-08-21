@@ -47,3 +47,6 @@ bkp/
 
 firebase-debug.log
 scripts/
+
+
+test-results/

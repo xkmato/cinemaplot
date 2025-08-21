@@ -158,6 +158,24 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - `npm run lint` - Run ESLint for code quality checks
 - `npm run type-check` - Run TypeScript type checking
 
+### Testing Scripts
+
+- `npm test` - Run unit tests with Jest
+- `npm run test:watch` - Run tests in watch mode for development
+- `npm run test:coverage` - Generate comprehensive test coverage report
+- `npm run test:e2e` - Run end-to-end tests with Playwright
+- `npm run test:e2e:ui` - Run E2E tests in interactive UI mode
+
+### Test Coverage
+
+The project includes comprehensive testing with:
+- **Unit Tests**: 53 tests covering utilities, helpers, and React components
+- **Integration Tests**: Component testing with React Testing Library
+- **End-to-End Tests**: 37 Playwright tests covering user flows, accessibility, and security
+- **Coverage Reports**: Detailed coverage analysis with threshold enforcement
+
+See `TESTING_IMPLEMENTATION.md` for complete testing documentation.
+
 ### Development with Firebase Emulators (Optional)
 
 For local development without affecting production data:
@@ -279,6 +297,20 @@ lib/                  # Utilities and configurations
 ├── helpers.ts        # Utility functions
 └── utils.ts          # Utility functions
 
+__tests__/            # Test suites and utilities
+├── test-utils.tsx    # Shared testing utilities & mock data
+├── lib/
+│   ├── helpers.test.ts    # Unit tests for Fountain validation
+│   └── utils.test.ts      # Unit tests for utility functions
+├── components/
+│   ├── event-card.test.tsx     # Event card component tests
+│   ├── screenplay-card.test.tsx # Screenplay card component tests
+│   └── movie-card.test.tsx     # Movie card component tests
+└── playwright-tests/
+    ├── basic-navigation.spec.ts     # E2E navigation tests
+    ├── user-flows.spec.ts          # E2E user journey tests
+    └── accessibility-security.spec.ts # A11y & security tests
+
 public/               # Static assets
 ├── next.svg
 ├── vercel.svg
@@ -289,6 +321,9 @@ Configuration files:
 ├── tailwind.config.ts # Tailwind CSS configuration
 ├── tsconfig.json     # TypeScript configuration
 ├── eslint.config.mjs # ESLint configuration
+├── jest.config.js    # Jest testing configuration
+├── jest.setup.ts     # Jest setup and global mocks
+├── playwright.config.ts # Playwright E2E testing config
 └── components.json   # shadcn/ui configuration
 ```
 
