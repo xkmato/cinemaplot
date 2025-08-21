@@ -31,7 +31,7 @@ test.describe('Search and Filter', () => {
     // Test search on discover page
     await page.goto('/discover');
     
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('input[type="search"], input[placeholder*="search"], input[placeholder*="Search"]');
     
     // Look for search input
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"], input[placeholder*="Search"]');
