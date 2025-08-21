@@ -226,6 +226,7 @@ test.describe('Data Validation', () => {
     await page.waitForTimeout(1500);
     
     const searchInput = page.locator('input[type="search"], input[placeholder*="search"]');
+    await expect(searchInput.first()).toBeVisible();
     
     if (await searchInput.count() > 0) {
       // Try XSS attempt (should be sanitized)
