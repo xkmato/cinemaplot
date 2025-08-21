@@ -66,7 +66,7 @@ test.describe('Search and Filter', () => {
         await firstFilter.click();
         
         // Should open filter options
-        await page.waitForTimeout(500);
+        await page.waitForSelector('.filter-options, .dropdown-menu, [role="listbox"], [role="menu"]');
         
         // Page should still be functional
         await expect(page.locator('main')).toBeVisible();
