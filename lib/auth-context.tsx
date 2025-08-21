@@ -1619,6 +1619,45 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             }
         }
 
+        // Send notification email to event owner
+        if (event.creatorId !== user.uid) {
+            try {
+                const { sendAuditionTapeNotificationEmail, getUserById } = await import('@/lib/email-service');
+                const eventOwner = await getUserById(event.creatorId);
+                
+                if (eventOwner && eventOwner.email) {
+                    const role = event.auditionRoles?.find(r => r.id === submission.roleId);
+                    
+                    const formatDate = (dateString: string) => {
+                        return new Date(dateString).toLocaleDateString('en-US', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                    };
+                    
+                    const eventOwnerName = eventOwner.firstName || eventOwner.displayName || eventOwner.username || 'Event Creator';
+                    
+                    await sendAuditionTapeNotificationEmail({
+                        eventOwnerName: eventOwnerName,
+                        email: eventOwner.email,
+                        eventTitle: event.title,
+                        roleName: role?.roleName || 'Unknown Role',
+                        eventDate: formatDate(event.date),
+                        eventLocation: event.location,
+                        submitterName: submission.submitterName,
+                        submitterEmail: submission.submitterEmail,
+                        tapeUrl: submission.tapeUrl,
+                        notes: submission.notes
+                    });
+                }
+            } catch (error) {
+                console.error('Error sending audition tape notification email to event owner:', error);
+                // Don't fail the submission if email fails
+            }
+        }
+
         // Create notification for event creator
         if (event.creatorId !== user.uid) {
             try {

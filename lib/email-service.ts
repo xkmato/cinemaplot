@@ -1,5 +1,7 @@
 import FormData from 'form-data';
 import Mailgun from 'mailgun.js';
+import { doc, getDoc } from 'firebase/firestore';
+import { appId, db } from './firebase';
 
 // Initialize Mailgun
 const mailgun = new Mailgun(FormData);
@@ -751,5 +753,436 @@ Privacy Policy: ${process.env.NEXT_PUBLIC_BASE_URL}/privacy-policy
 Terms of Service: ${process.env.NEXT_PUBLIC_BASE_URL}/terms-of-service
 
 You received this email because you submitted an audition tape through CinemaPlot. This is an automated confirmation message.
+  `;
+}
+
+export interface AuditionTapeNotificationData {
+  eventOwnerName: string;
+  email: string;
+  eventTitle: string;
+  roleName: string;
+  eventDate: string;
+  eventLocation: string;
+  submitterName: string;
+  submitterEmail?: string;
+  tapeUrl: string;
+  notes?: string;
+}
+
+export interface UserData {
+  uid: string;
+  email?: string;
+  displayName?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+}
+
+export async function getUserById(userId: string): Promise<UserData | null> {
+  try {
+    const userDocRef = doc(db, `artifacts/${appId}/public/data/users`, userId);
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      return {
+        uid: userDoc.id,
+        email: userData.email,
+        displayName: userData.displayName,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        username: userData.username,
+      };
+    } else {
+      console.log(`User with ID ${userId} not found`);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching user by ID:', error);
+    return null;
+  }
+}
+
+export async function sendAuditionTapeNotificationEmail(data: AuditionTapeNotificationData): Promise<boolean> {
+  try {
+    console.log('Attempting to send audition tape notification email to event owner:', data.email);
+    
+    const client = getMailgunClient();
+    const domain = process.env.MAILGUN_DOMAIN!;
+    const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    
+    // Create the notification email HTML content
+    const htmlContent = createAuditionTapeNotificationEmailHTML(data);
+    
+    // Create the plain text version
+    const textContent = createAuditionTapeNotificationEmailText(data);
+
+    const messageData = {
+      from: `CinemaPlot Auditions <${fromEmail}>`,
+      to: data.email,
+      subject: `New Audition Tape Submitted - ${data.eventTitle}`,
+      text: textContent,
+      html: htmlContent,
+      'o:tag': ['audition-notification', 'event-owner'],
+      'o:tracking': true,
+      'o:tracking-clicks': true,
+      'o:tracking-opens': true,
+    };
+
+    console.log('Sending audition tape notification email with data:', { 
+      from: messageData.from, 
+      to: messageData.to, 
+      subject: messageData.subject,
+      domain 
+    });
+
+    const response = await client.messages.create(domain, messageData);
+    
+    console.log('Audition tape notification email sent successfully:', response.id);
+    return true;
+  } catch (error) {
+    console.error('Failed to send audition tape notification email - detailed error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    return false;
+  }
+}
+
+function createAuditionTapeNotificationEmailHTML(data: AuditionTapeNotificationData): string {
+  const dashboardUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/events/${data.eventTitle.toLowerCase().replace(/\s+/g, '-')}`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Audition Tape Submitted - ${data.eventTitle}</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center; 
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 600;
+        }
+        .header p { 
+            margin: 10px 0 0 0; 
+            opacity: 0.9; 
+            font-size: 16px;
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .content h2 { 
+            color: #667eea; 
+            margin-top: 0; 
+            font-size: 24px;
+        }
+        .notification-box {
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .notification-box .tape-icon {
+            font-size: 48px;
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        .notification-box h3 {
+            color: #0d47a1;
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+        .notification-box p {
+            color: #0d47a1;
+            margin: 0;
+            font-size: 16px;
+        }
+        .submission-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #667eea;
+        }
+        .submission-details h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            min-width: 120px;
+        }
+        .detail-value {
+            color: #333;
+            text-align: right;
+            flex: 1;
+            margin-left: 20px;
+            word-break: break-word;
+        }
+        .tape-url {
+            background-color: #f1f3f4;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        .notes-section {
+            background-color: #fff8e1;
+            border: 1px solid #ffcc02;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .notes-section h5 {
+            margin: 0 0 8px 0;
+            color: #e65100;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .notes-section p {
+            margin: 0;
+            color: #ef6c00;
+            font-size: 14px;
+            font-style: italic;
+        }
+        .cta-button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px auto;
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .cta-section {
+            text-align: center;
+            margin: 30px 0;
+            padding: 25px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .footer { 
+            background-color: #f8f9fa; 
+            padding: 30px; 
+            text-align: center; 
+            color: #666; 
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer a { 
+            color: #667eea; 
+            text-decoration: none; 
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content, .footer { padding: 20px; }
+            .header h1 { font-size: 24px; }
+            .detail-row { flex-direction: column; align-items: flex-start; }
+            .detail-value { margin-left: 0; margin-top: 5px; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 New Audition Tape!</h1>
+            <p>A new audition submission for your event</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello ${data.eventOwnerName}! 👋</h2>
+            
+            <div class="notification-box">
+                <div class="tape-icon">🎭</div>
+                <h3>Audition Tape Received</h3>
+                <p><strong>${data.submitterName}</strong> has submitted an audition tape for your event!</p>
+            </div>
+            
+            <p>Great news! You've received a new audition tape submission for your casting call. Here are the details:</p>
+            
+            <div class="submission-details">
+                <h4>Submission Details</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Event:</span>
+                    <span class="detail-value">${data.eventTitle}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Role:</span>
+                    <span class="detail-value">${data.roleName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Event Date:</span>
+                    <span class="detail-value">${data.eventDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Location:</span>
+                    <span class="detail-value">${data.eventLocation}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Submitted By:</span>
+                    <span class="detail-value">${data.submitterName}</span>
+                </div>
+                ${data.submitterEmail ? `
+                <div class="detail-row">
+                    <span class="detail-label">Email:</span>
+                    <span class="detail-value">${data.submitterEmail}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                    <span class="detail-label">Audition Video:</span>
+                    <span class="detail-value">
+                        <div class="tape-url">
+                            <a href="${data.tapeUrl}" target="_blank" style="color: #667eea; text-decoration: none;">
+                                ${data.tapeUrl}
+                            </a>
+                        </div>
+                    </span>
+                </div>
+            </div>
+            
+            ${data.notes ? `
+            <div class="notes-section">
+                <h5>Additional Notes from ${data.submitterName}:</h5>
+                <p>"${data.notes}"</p>
+            </div>
+            ` : ''}
+            
+            <div class="cta-section">
+                <p style="margin: 0 0 20px 0; color: #555;">Ready to review this audition?</p>
+                <a href="${data.tapeUrl}" class="cta-button" target="_blank">
+                    🎥 Watch Audition Tape
+                </a>
+                <br>
+                <a href="${dashboardUrl}" style="color: #667eea; text-decoration: none; font-weight: 500; margin-top: 15px; display: inline-block;">
+                    View Event Dashboard →
+                </a>
+            </div>
+            
+            <h3>Next Steps:</h3>
+            <ul style="color: #555; margin: 20px 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;"><strong>Review the Tape:</strong> Click the link above to watch their audition</li>
+                <li style="margin-bottom: 8px;"><strong>Contact the Actor:</strong> ${data.submitterEmail ? `Reach out to ${data.submitterName} at ${data.submitterEmail}` : `Use CinemaPlot to contact ${data.submitterName}`}</li>
+                <li style="margin-bottom: 8px;"><strong>Make Your Decision:</strong> Remember to respond within your stated timeline</li>
+                <li style="margin-bottom: 8px;"><strong>Keep Records:</strong> Save this email for your casting records</li>
+            </ul>
+            
+            <p>We've also sent a confirmation email to ${data.submitterName} letting them know their tape was received and that they should expect to hear back within 7 days.</p>
+            
+            <p>Happy casting! 🎭</p>
+            
+            <p>Best regards,<br><strong>The CinemaPlot Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p><a href="${process.env.NEXT_PUBLIC_BASE_URL}">Visit CinemaPlot</a> • 
+               <a href="${process.env.NEXT_PUBLIC_BASE_URL}/events">Manage Your Events</a></p>
+            
+            <p>&copy; 2025 CinemaPlot. All rights reserved.</p>
+            <p>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/privacy-policy">Privacy Policy</a> • 
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/terms-of-service">Terms of Service</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                You received this email because someone submitted an audition tape for your event on CinemaPlot. 
+                This is an automated notification.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+}
+
+function createAuditionTapeNotificationEmailText(data: AuditionTapeNotificationData): string {
+  return `
+🎬 NEW AUDITION TAPE SUBMITTED - ${data.eventTitle}
+
+Hello ${data.eventOwnerName}!
+
+🎭 AUDITION TAPE RECEIVED
+${data.submitterName} has submitted an audition tape for your event!
+
+SUBMISSION DETAILS:
+• Event: ${data.eventTitle}
+• Role: ${data.roleName}
+• Event Date: ${data.eventDate}
+• Location: ${data.eventLocation}
+• Submitted By: ${data.submitterName}
+${data.submitterEmail ? `• Email: ${data.submitterEmail}` : ''}
+• Audition Video: ${data.tapeUrl}
+
+${data.notes ? `ADDITIONAL NOTES FROM ${data.submitterName.toUpperCase()}:
+"${data.notes}"
+
+` : ''}NEXT STEPS:
+• Review the Tape: Watch their audition at the link above
+• Contact the Actor: ${data.submitterEmail ? `Reach out to ${data.submitterName} at ${data.submitterEmail}` : `Use CinemaPlot to contact ${data.submitterName}`}
+• Make Your Decision: Remember to respond within your stated timeline
+• Keep Records: Save this email for your casting records
+
+We've also sent a confirmation email to ${data.submitterName} letting them know their tape was received and that they should expect to hear back within 7 days.
+
+Watch Audition Tape: ${data.tapeUrl}
+
+Happy casting! 🎭
+
+Best regards,
+The CinemaPlot Team
+
+---
+Visit CinemaPlot: ${process.env.NEXT_PUBLIC_BASE_URL}
+Manage Your Events: ${process.env.NEXT_PUBLIC_BASE_URL}/events
+
+© 2025 CinemaPlot. All rights reserved.
+Privacy Policy: ${process.env.NEXT_PUBLIC_BASE_URL}/privacy-policy
+Terms of Service: ${process.env.NEXT_PUBLIC_BASE_URL}/terms-of-service
+
+You received this email because someone submitted an audition tape for your event on CinemaPlot. This is an automated notification.
   `;
 }

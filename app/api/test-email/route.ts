@@ -1,4 +1,4 @@
-import { AuditionTapeConfirmationData, sendAuditionTapeConfirmationEmail, sendWelcomeEmail, WelcomeEmailData } from '@/lib/email-service';
+import { AuditionTapeConfirmationData, AuditionTapeNotificationData, sendAuditionTapeConfirmationEmail, sendAuditionTapeNotificationEmail, sendWelcomeEmail, WelcomeEmailData } from '@/lib/email-service';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     }
     
     let success = false;
-    let emailData: WelcomeEmailData | AuditionTapeConfirmationData | null = null;
+    let emailData: WelcomeEmailData | AuditionTapeConfirmationData | AuditionTapeNotificationData | null = null;
     
     if (emailType === 'welcome') {
       // Test welcome email data
@@ -57,10 +57,28 @@ export async function GET(request: Request) {
       console.log('Attempting to send test audition confirmation email...');
       success = await sendAuditionTapeConfirmationEmail(testEmailData);
       emailData = testEmailData;
+    } else if (emailType === 'audition-notification') {
+      // Test audition tape notification email data (for event owners)
+      const testEmailData: AuditionTapeNotificationData = {
+        eventOwnerName: 'Kenneth Director',
+        email: 'kenneth@uvotam.com', // Replace with your email for testing
+        eventTitle: 'Feature Film Audition - Leading Role',
+        roleName: 'Jake Morrison',
+        eventDate: 'Saturday, December 21, 2024',
+        eventLocation: 'Los Angeles, CA - Studio District',
+        submitterName: 'Jane Smith Actor',
+        submitterEmail: 'jane@example.com',
+        tapeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        notes: 'I\'m really excited about this role and have prepared thoroughly. Looking forward to hearing from you!'
+      };
+      
+      console.log('Attempting to send test audition notification email...');
+      success = await sendAuditionTapeNotificationEmail(testEmailData);
+      emailData = testEmailData;
     } else {
       return NextResponse.json({
         error: 'Invalid email type',
-        supportedTypes: ['welcome', 'audition-confirmation']
+        supportedTypes: ['welcome', 'audition-confirmation', 'audition-notification']
       }, { status: 400 });
     }
     
