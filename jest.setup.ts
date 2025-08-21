@@ -25,50 +25,8 @@ jest.mock('next/navigation', () => ({
   notFound: jest.fn(),
 }))
 
-// Mock Firebase
-jest.mock('firebase/app', () => ({
-  initializeApp: jest.fn(() => ({})),
-  getApps: jest.fn(() => []),
-}))
-
-jest.mock('firebase/auth', () => ({
-  getAuth: jest.fn(() => ({})),
-  connectAuthEmulator: jest.fn(),
-  signInWithPopup: jest.fn(),
-  GoogleAuthProvider: jest.fn(() => ({})),
-  signOut: jest.fn(),
-  onAuthStateChanged: jest.fn(),
-}))
-
-jest.mock('firebase/firestore', () => ({
-  getFirestore: jest.fn(() => ({})),
-  connectFirestoreEmulator: jest.fn(),
-  collection: jest.fn(),
-  doc: jest.fn(),
-  getDoc: jest.fn(),
-  getDocs: jest.fn(),
-  addDoc: jest.fn(),
-  updateDoc: jest.fn(),
-  deleteDoc: jest.fn(),
-  query: jest.fn(),
-  where: jest.fn(),
-  orderBy: jest.fn(),
-  limit: jest.fn(),
-  onSnapshot: jest.fn(),
-}))
-
-jest.mock('firebase/storage', () => ({
-  getStorage: jest.fn(() => ({})),
-  connectStorageEmulator: jest.fn(),
-  ref: jest.fn(),
-  uploadBytes: jest.fn(),
-  getDownloadURL: jest.fn(),
-  deleteObject: jest.fn(),
-}))
-
 // Setup global text encoding
-global.TextEncoder = TextEncoder
-global.TextDecoder = TextDecoder
+Object.assign(global, { TextDecoder, TextEncoder })
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -77,8 +35,8 @@ Object.defineProperty(window, 'matchMedia', {
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
+    addListener: jest.fn(),
+    removeListener: jest.fn(),
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
     dispatchEvent: jest.fn(),
@@ -108,5 +66,10 @@ const localStorageMock = {
   setItem: jest.fn(),
   removeItem: jest.fn(),
   clear: jest.fn(),
-}
-global.localStorage = localStorageMock
+  length: 0,
+  key: jest.fn(),
+} as Storage
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+})
