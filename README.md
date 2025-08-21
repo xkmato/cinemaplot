@@ -169,6 +169,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ### Test Coverage
 
 The project includes comprehensive testing with:
+
 - **Unit Tests**: 53 tests covering utilities, helpers, and React components
 - **Integration Tests**: Component testing with React Testing Library
 - **End-to-End Tests**: 37 Playwright tests covering user flows, accessibility, and security

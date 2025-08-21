@@ -61,24 +61,24 @@ describe('MovieCard', () => {
     })
 
     it('does not show rating when not available', () => {
-        render(<MovieCard {...defaultProps} />)
+        const unratedMovie = {
+            ...testMovie,
+            averageRating: undefined,
+            totalRatings: undefined,
+        }
 
-        // Original movie should not have rating, so shouldn't show rating section
+        render(<MovieCard movie={unratedMovie} />)
+
         expect(screen.queryByText('4.5')).not.toBeInTheDocument()
     })
 
     it('handles missing optional fields gracefully', () => {
         const minimalMovie = {
-            id: 'minimal-id',
-            title: 'Minimal Movie',
-            logLine: 'A test movie',
-            synopsis: 'This is a test movie synopsis',
-            videoUrl: 'https://www.youtube.com/watch?v=test',
-            creatorId: 'test-user-id',
-            creatorName: 'Test Creator',
-            createdAt: '2024-01-01T00:00:00.000Z',
-            category: 'Short Film',
-            duration: '10 minutes',
+            ...testMovie,
+            logLine: undefined,
+            averageRating: undefined,
+            totalRatings: undefined,
+            tags: undefined,
         }
 
         expect(() => {
@@ -112,9 +112,14 @@ describe('MovieCard', () => {
     })
 
     it('does not show tags section when no tags available', () => {
-        render(<MovieCard {...defaultProps} />)
+        const noTagsMovie = {
+            ...testMovie,
+            tags: undefined,
+        }
 
-        // testMovie doesn't have tags, so shouldn't show tag badges
+        render(<MovieCard movie={noTagsMovie} />)
+
+        // Should not have any badge elements when no tags
         expect(screen.queryByText('Drama')).not.toBeInTheDocument()
     })
 })
