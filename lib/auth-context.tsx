@@ -1624,10 +1624,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             try {
                 const { sendAuditionTapeNotificationEmail, getUserById } = await import('@/lib/email-service');
                 const eventOwner = await getUserById(event.creatorId);
-                
+
                 if (eventOwner && eventOwner.email) {
                     const role = event.auditionRoles?.find(r => r.id === submission.roleId);
-                    
+
                     const formatDate = (dateString: string) => {
                         return new Date(dateString).toLocaleDateString('en-US', {
                             weekday: 'long',
@@ -1636,9 +1636,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                             day: 'numeric'
                         });
                     };
-                    
+
                     const eventOwnerName = eventOwner.firstName || eventOwner.displayName || eventOwner.username || 'Event Creator';
-                    
+
                     await sendAuditionTapeNotificationEmail({
                         eventOwnerName: eventOwnerName,
                         email: eventOwner.email,

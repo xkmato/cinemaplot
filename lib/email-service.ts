@@ -1,6 +1,6 @@
+import { doc, getDoc } from 'firebase/firestore';
 import FormData from 'form-data';
 import Mailgun from 'mailgun.js';
-import { doc, getDoc } from 'firebase/firestore';
 import { appId, db } from './firebase';
 
 // Initialize Mailgun

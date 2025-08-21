@@ -9,7 +9,7 @@ This comprehensive feature automatically sends email confirmations to people who
 ### 1. Enhanced Email Functions (`lib/email-service.ts`)
 
 - **Added** `sendAuditionTapeConfirmationEmail()` - For submitters
-- **Added** `sendAuditionTapeNotificationEmail()` - For event owners  
+- **Added** `sendAuditionTapeNotificationEmail()` - For event owners
 - **Added** `getUserById()` - Helper to fetch user data including email
 - **Added** `AuditionTapeConfirmationData` & `AuditionTapeNotificationData` interfaces
 - Professional HTML email templates for both types with:
@@ -119,7 +119,7 @@ This comprehensive feature automatically sends email confirmations to people who
 # Test submitter confirmation email
 curl "http://localhost:3000/api/test-email?type=audition-confirmation"
 
-# Test event owner notification email  
+# Test event owner notification email
 curl "http://localhost:3000/api/test-email?type=audition-notification"
 
 # Test welcome email (existing)
