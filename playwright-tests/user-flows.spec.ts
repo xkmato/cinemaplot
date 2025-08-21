@@ -14,7 +14,8 @@ test.describe('Create Content Flow', () => {
   test('should show create options', async ({ page }) => {
     await page.goto('/create');
     
-    await page.waitForTimeout(1500);
+    // Wait for at least one create button or link to appear
+    await page.waitForSelector('button:has-text("Create"), a:has-text("Create"), [role="button"]:has-text("Create"), a:has-text("Event"), a:has-text("Movie"), a:has-text("Upload")');
     
     // Look for create buttons/options
     const createButtons = page.locator('button:has-text("Create"), a:has-text("Create"), [role="button"]:has-text("Create")');
