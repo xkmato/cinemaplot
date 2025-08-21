@@ -143,7 +143,7 @@ export default function EventDetailClient({ eventId }: EventDetailClientProps) {
 
         try {
             await submitAuditionTape(currentEvent.id, submission);
-            showSuccess('Audition tape submitted successfully!', 'Your audition tape has been received and will be reviewed soon.');
+            showSuccess('Audition tape submitted successfully!', 'Your audition tape has been received and you will receive a confirmation email shortly. Expect to hear from us within 7 days.');
             setShowSubmitTapeModal(false);
         } catch (error) {
             console.error('Failed to submit audition tape:', error);

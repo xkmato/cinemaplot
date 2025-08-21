@@ -58,7 +58,7 @@ export default function SubmitAuditionTape({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.roleId || !formData.tapeUrl || !formData.submitterName) {
+        if (!formData.roleId || !formData.tapeUrl || !formData.submitterName || !formData.submitterEmail) {
             setError('Please fill in all required fields.');
             return;
         }
@@ -68,6 +68,13 @@ export default function SubmitAuditionTape({
             new URL(formData.tapeUrl);
         } catch {
             setError('Please enter a valid URL for your audition tape.');
+            return;
+        }
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.submitterEmail)) {
+            setError('Please enter a valid email address.');
             return;
         }
 
@@ -168,7 +175,7 @@ export default function SubmitAuditionTape({
                                         </div>
                                     </div>
                                     <div>
-                                        <Label htmlFor="email">Email (optional)</Label>
+                                        <Label htmlFor="email">Email *</Label>
                                         <Input
                                             id="email"
                                             type="email"
@@ -178,7 +185,11 @@ export default function SubmitAuditionTape({
                                                 ...prev,
                                                 submitterEmail: e.target.value
                                             }))}
+                                            required
                                         />
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            We&apos;ll send you a confirmation email when your tape is received
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -308,7 +319,7 @@ export default function SubmitAuditionTape({
                                 </Button>
                                 <Button
                                     type="submit"
-                                    disabled={isSubmitting || !formData.roleId || !formData.tapeUrl || !formData.submitterName}
+                                    disabled={isSubmitting || !formData.roleId || !formData.tapeUrl || !formData.submitterName || !formData.submitterEmail}
                                 >
                                     {isSubmitting ? (
                                         'Submitting...'

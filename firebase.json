@@ -9,6 +9,7 @@
     "source": ".",
     "ignore": [
       "firebase.json",
+      "vercel.json",
       "**/.*",
       "**/node_modules/**",
       "**/scripts/**",

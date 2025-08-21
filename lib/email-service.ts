@@ -424,3 +424,332 @@ export async function sendCollaborationInviteEmail(
     return false;
   }
 }
+
+export interface AuditionTapeConfirmationData {
+  submitterName: string;
+  email: string;
+  eventTitle: string;
+  roleName: string;
+  eventDate: string;
+  eventLocation: string;
+}
+
+export async function sendAuditionTapeConfirmationEmail(data: AuditionTapeConfirmationData): Promise<boolean> {
+  try {
+    console.log('Attempting to send audition tape confirmation email to:', data.email);
+    
+    const client = getMailgunClient();
+    const domain = process.env.MAILGUN_DOMAIN!;
+    const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    
+    // Create the confirmation email HTML content
+    const htmlContent = createAuditionTapeConfirmationEmailHTML(data);
+    
+    // Create the plain text version
+    const textContent = createAuditionTapeConfirmationEmailText(data);
+
+    const messageData = {
+      from: `CinemaPlot Auditions <${fromEmail}>`,
+      to: data.email,
+      subject: `Audition Tape Received - ${data.eventTitle}`,
+      text: textContent,
+      html: htmlContent,
+      'o:tag': ['audition-confirmation', 'audition-tape'],
+      'o:tracking': true,
+      'o:tracking-clicks': true,
+      'o:tracking-opens': true,
+    };
+
+    console.log('Sending audition tape confirmation email with data:', { 
+      from: messageData.from, 
+      to: messageData.to, 
+      subject: messageData.subject,
+      domain 
+    });
+
+    const response = await client.messages.create(domain, messageData);
+    
+    console.log('Audition tape confirmation email sent successfully:', response.id);
+    return true;
+  } catch (error) {
+    console.error('Failed to send audition tape confirmation email - detailed error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    return false;
+  }
+}
+
+function createAuditionTapeConfirmationEmailHTML(data: AuditionTapeConfirmationData): string {
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audition Tape Received - ${data.eventTitle}</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center; 
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 600;
+        }
+        .header p { 
+            margin: 10px 0 0 0; 
+            opacity: 0.9; 
+            font-size: 16px;
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .content h2 { 
+            color: #667eea; 
+            margin-top: 0; 
+            font-size: 24px;
+        }
+        .confirmation-box {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .confirmation-box .check-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .confirmation-box h3 {
+            color: #155724;
+            margin: 0 0 10px 0;
+            font-size: 20px;
+        }
+        .confirmation-box p {
+            color: #155724;
+            margin: 0;
+            font-size: 16px;
+        }
+        .event-details {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #667eea;
+        }
+        .event-details h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .detail-value {
+            color: #333;
+            text-align: right;
+            flex: 1;
+            margin-left: 20px;
+        }
+        .timeline-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .timeline-box h4 {
+            color: #856404;
+            margin: 0 0 10px 0;
+            font-size: 18px;
+        }
+        .timeline-box p {
+            color: #856404;
+            margin: 0;
+            font-size: 16px;
+        }
+        .timeline-box .clock-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .footer { 
+            background-color: #f8f9fa; 
+            padding: 30px; 
+            text-align: center; 
+            color: #666; 
+            font-size: 14px;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer a { 
+            color: #667eea; 
+            text-decoration: none; 
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .header, .content, .footer { padding: 20px; }
+            .header h1 { font-size: 24px; }
+            .detail-row { flex-direction: column; align-items: flex-start; }
+            .detail-value { margin-left: 0; margin-top: 5px; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Audition Tape Received!</h1>
+            <p>Your submission has been successfully received</p>
+        </div>
+        
+        <div class="content">
+            <h2>Hello ${data.submitterName}! 👋</h2>
+            
+            <div class="confirmation-box">
+                <div class="check-icon">✅</div>
+                <h3>Submission Confirmed</h3>
+                <p>Your audition tape has been successfully received and will be reviewed by the casting team.</p>
+            </div>
+            
+            <p>Thank you for submitting your audition tape! We wanted to confirm that your submission has been received and is now being reviewed.</p>
+            
+            <div class="event-details">
+                <h4>Submission Details</h4>
+                <div class="detail-row">
+                    <span class="detail-label">Event:</span>
+                    <span class="detail-value">${data.eventTitle}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Role:</span>
+                    <span class="detail-value">${data.roleName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Event Date:</span>
+                    <span class="detail-value">${data.eventDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Location:</span>
+                    <span class="detail-value">${data.eventLocation}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Submitted By:</span>
+                    <span class="detail-value">${data.submitterName}</span>
+                </div>
+            </div>
+            
+            <div class="timeline-box">
+                <div class="clock-icon">🕐</div>
+                <h4>What Happens Next?</h4>
+                <p><strong>Expect to hear from us within 7 days</strong></p>
+                <p>The casting team will review your submission and contact you if you're selected to move forward in the audition process.</p>
+            </div>
+            
+            <h3>Important Notes:</h3>
+            <ul style="color: #555; margin: 20px 0; padding-left: 20px;">
+                <li style="margin-bottom: 8px;"><strong>Review Timeline:</strong> Please allow up to 7 business days for the initial review</li>
+                <li style="margin-bottom: 8px;"><strong>Contact Method:</strong> If selected, we'll contact you using the email address you provided</li>
+                <li style="margin-bottom: 8px;"><strong>Keep Your Schedule Open:</strong> If called back, callbacks typically happen within 2-3 weeks of the original audition date</li>
+                <li style="margin-bottom: 8px;"><strong>Questions:</strong> If you have any urgent questions, please contact the casting team through CinemaPlot</li>
+            </ul>
+            
+            <p>We appreciate your interest and the time you've invested in preparing your audition. Break a leg! 🎭</p>
+            
+            <p>Best regards,<br><strong>The CinemaPlot Casting Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p><a href="${process.env.NEXT_PUBLIC_BASE_URL}">Visit CinemaPlot</a> • 
+               <a href="${process.env.NEXT_PUBLIC_BASE_URL}/discover">Discover More Auditions</a></p>
+            
+            <p>&copy; 2025 CinemaPlot. All rights reserved.</p>
+            <p>
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/privacy-policy">Privacy Policy</a> • 
+                <a href="${process.env.NEXT_PUBLIC_BASE_URL}/terms-of-service">Terms of Service</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                You received this email because you submitted an audition tape through CinemaPlot. 
+                This is an automated confirmation message.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+}
+
+function createAuditionTapeConfirmationEmailText(data: AuditionTapeConfirmationData): string {
+  return `
+🎬 AUDITION TAPE RECEIVED - ${data.eventTitle}
+
+Hello ${data.submitterName}!
+
+✅ SUBMISSION CONFIRMED
+Your audition tape has been successfully received and will be reviewed by the casting team.
+
+SUBMISSION DETAILS:
+• Event: ${data.eventTitle}
+• Role: ${data.roleName}
+• Event Date: ${data.eventDate}
+• Location: ${data.eventLocation}
+• Submitted By: ${data.submitterName}
+
+🕐 WHAT HAPPENS NEXT?
+EXPECT TO HEAR FROM US WITHIN 7 DAYS
+
+The casting team will review your submission and contact you if you're selected to move forward in the audition process.
+
+IMPORTANT NOTES:
+• Review Timeline: Please allow up to 7 business days for the initial review
+• Contact Method: If selected, we'll contact you using the email address you provided
+• Keep Your Schedule Open: If called back, callbacks typically happen within 2-3 weeks of the original audition date
+• Questions: If you have any urgent questions, please contact the casting team through CinemaPlot
+
+We appreciate your interest and the time you've invested in preparing your audition. Break a leg! 🎭
+
+Best regards,
+The CinemaPlot Casting Team
+
+---
+Visit CinemaPlot: ${process.env.NEXT_PUBLIC_BASE_URL}
+Discover More Auditions: ${process.env.NEXT_PUBLIC_BASE_URL}/discover
+
+© 2025 CinemaPlot. All rights reserved.
+Privacy Policy: ${process.env.NEXT_PUBLIC_BASE_URL}/privacy-policy
+Terms of Service: ${process.env.NEXT_PUBLIC_BASE_URL}/terms-of-service
+
+You received this email because you submitted an audition tape through CinemaPlot. This is an automated confirmation message.
+  `;
+}

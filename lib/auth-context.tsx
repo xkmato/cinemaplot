@@ -1590,6 +1590,35 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             tapeData
         );
 
+        // Send confirmation email to the submitter if email is provided
+        if (submission.submitterEmail) {
+            try {
+                const { sendAuditionTapeConfirmationEmail } = await import('@/lib/email-service');
+                const role = event.auditionRoles?.find(r => r.id === submission.roleId);
+
+                const formatDate = (dateString: string) => {
+                    return new Date(dateString).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                };
+
+                await sendAuditionTapeConfirmationEmail({
+                    submitterName: submission.submitterName,
+                    email: submission.submitterEmail,
+                    eventTitle: event.title,
+                    roleName: role?.roleName || 'Unknown Role',
+                    eventDate: formatDate(event.date),
+                    eventLocation: event.location
+                });
+            } catch (error) {
+                console.error('Error sending audition tape confirmation email:', error);
+                // Don't fail the submission if email fails
+            }
+        }
+
         // Create notification for event creator
         if (event.creatorId !== user.uid) {
             try {

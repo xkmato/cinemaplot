@@ -1,9 +1,12 @@
-import { sendWelcomeEmail, WelcomeEmailData } from '@/lib/email-service';
+import { AuditionTapeConfirmationData, sendAuditionTapeConfirmationEmail, sendWelcomeEmail, WelcomeEmailData } from '@/lib/email-service';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    console.log('Testing email configuration...');
+    const { searchParams } = new URL(request.url);
+    const emailType = searchParams.get('type') || 'welcome';
+    
+    console.log(`Testing ${emailType} email configuration...`);
     
     // Check environment variables
     const apiKey = process.env.MAILGUN_API_KEY;
@@ -25,20 +28,47 @@ export async function GET() {
       }, { status: 500 });
     }
     
-    // Test email data
-    const testEmailData: WelcomeEmailData = {
-      email: 'kenneth@uvotam.com', // Replace with your email for testing
-      firstName: 'Kenneth',
-      displayName: 'Kenneth Test',
-      username: 'kennethtest'
-    };
+    let success = false;
+    let emailData: WelcomeEmailData | AuditionTapeConfirmationData | null = null;
     
-    console.log('Attempting to send test email...');
-    const success = await sendWelcomeEmail(testEmailData);
+    if (emailType === 'welcome') {
+      // Test welcome email data
+      const testEmailData: WelcomeEmailData = {
+        email: 'kenneth@uvotam.com', // Replace with your email for testing
+        firstName: 'Kenneth',
+        displayName: 'Kenneth Test',
+        username: 'kennethtest'
+      };
+      
+      console.log('Attempting to send test welcome email...');
+      success = await sendWelcomeEmail(testEmailData);
+      emailData = testEmailData;
+    } else if (emailType === 'audition-confirmation') {
+      // Test audition tape confirmation email data
+      const testEmailData: AuditionTapeConfirmationData = {
+        submitterName: 'Kenneth Test Actor',
+        email: 'kenneth@uvotam.com', // Replace with your email for testing
+        eventTitle: 'Feature Film Audition - Leading Role',
+        roleName: 'Jake Morrison',
+        eventDate: 'Saturday, December 21, 2024',
+        eventLocation: 'Los Angeles, CA - Studio District'
+      };
+      
+      console.log('Attempting to send test audition confirmation email...');
+      success = await sendAuditionTapeConfirmationEmail(testEmailData);
+      emailData = testEmailData;
+    } else {
+      return NextResponse.json({
+        error: 'Invalid email type',
+        supportedTypes: ['welcome', 'audition-confirmation']
+      }, { status: 400 });
+    }
     
     return NextResponse.json({
       success,
-      message: success ? 'Test email sent successfully' : 'Failed to send test email',
+      emailType,
+      message: success ? `Test ${emailType} email sent successfully` : `Failed to send test ${emailType} email`,
+      emailData,
       configuration: {
         domain,
         fromEmail: fromEmail || `noreply@${domain}`,
