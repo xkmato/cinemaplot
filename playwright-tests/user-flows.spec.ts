@@ -41,7 +41,8 @@ test.describe('Search and Filter', () => {
       await page.keyboard.press('Enter');
       
       // Wait for search results
-      await page.waitForTimeout(1000);
+      // TODO: Replace '.search-result' with the actual selector for a search result item if different
+      await page.waitForSelector('main .search-result');
       
       // Page should still be functional after search
       await expect(page.locator('main')).toBeVisible();
