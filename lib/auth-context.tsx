@@ -1593,7 +1593,6 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         // Send confirmation email to the submitter if email is provided
         if (submission.submitterEmail) {
             try {
-                const { sendAuditionTapeConfirmationEmail } = await import('@/lib/email-service');
                 const role = event.auditionRoles?.find(r => r.id === submission.roleId);
 
                 const formatDate = (dateString: string) => {
@@ -1605,14 +1604,27 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                     });
                 };
 
-                await sendAuditionTapeConfirmationEmail({
-                    submitterName: submission.submitterName,
-                    email: submission.submitterEmail,
-                    eventTitle: event.title,
-                    roleName: role?.roleName || 'Unknown Role',
-                    eventDate: formatDate(event.date),
-                    eventLocation: event.location
+                const response = await fetch('/api/email/audition-tape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: 'confirmation',
+                        data: {
+                            submitterName: submission.submitterName,
+                            email: submission.submitterEmail,
+                            eventTitle: event.title,
+                            roleName: role?.roleName || 'Unknown Role',
+                            eventDate: formatDate(event.date),
+                            eventLocation: event.location
+                        }
+                    })
                 });
+
+                if (!response.ok) {
+                    console.error('Failed to send confirmation email:', response.statusText);
+                }
             } catch (error) {
                 console.error('Error sending audition tape confirmation email:', error);
                 // Don't fail the submission if email fails
@@ -1622,35 +1634,40 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         // Send notification email to event owner
         if (event.creatorId !== user.uid) {
             try {
-                const { sendAuditionTapeNotificationEmail, getUserById } = await import('@/lib/email-service');
-                const eventOwner = await getUserById(event.creatorId);
+                const role = event.auditionRoles?.find(r => r.id === submission.roleId);
 
-                if (eventOwner && eventOwner.email) {
-                    const role = event.auditionRoles?.find(r => r.id === submission.roleId);
-
-                    const formatDate = (dateString: string) => {
-                        return new Date(dateString).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        });
-                    };
-
-                    const eventOwnerName = eventOwner.firstName || eventOwner.displayName || eventOwner.username || 'Event Creator';
-
-                    await sendAuditionTapeNotificationEmail({
-                        eventOwnerName: eventOwnerName,
-                        email: eventOwner.email,
-                        eventTitle: event.title,
-                        roleName: role?.roleName || 'Unknown Role',
-                        eventDate: formatDate(event.date),
-                        eventLocation: event.location,
-                        submitterName: submission.submitterName,
-                        submitterEmail: submission.submitterEmail,
-                        tapeUrl: submission.tapeUrl,
-                        notes: submission.notes
+                const formatDate = (dateString: string) => {
+                    return new Date(dateString).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
                     });
+                };
+
+                const response = await fetch('/api/email/audition-tape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: 'notification',
+                        data: {
+                            eventOwnerId: event.creatorId,
+                            eventTitle: event.title,
+                            roleName: role?.roleName || 'Unknown Role',
+                            eventDate: formatDate(event.date),
+                            eventLocation: event.location,
+                            submitterName: submission.submitterName,
+                            submitterEmail: submission.submitterEmail,
+                            tapeUrl: submission.tapeUrl,
+                            notes: submission.notes
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to send notification email:', response.statusText);
                 }
             } catch (error) {
                 console.error('Error sending audition tape notification email to event owner:', error);
