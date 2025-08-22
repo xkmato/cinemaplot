@@ -442,7 +442,12 @@ export async function sendAuditionTapeConfirmationEmail(data: AuditionTapeConfir
     
     const client = getMailgunClient();
     const domain = process.env.MAILGUN_DOMAIN!;
-    const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    const fromEmailConfig = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    
+    // Extract just the email address if it's in the format "Name <email@domain.com>"
+    const emailMatch = fromEmailConfig.match(/<([^>]+)>/);
+    const emailAddress = emailMatch ? emailMatch[1] : fromEmailConfig;
+    const fromEmail = `CinemaPlot Auditions <${emailAddress}>`;
     
     // Create the confirmation email HTML content
     const htmlContent = createAuditionTapeConfirmationEmailHTML(data);
@@ -451,7 +456,7 @@ export async function sendAuditionTapeConfirmationEmail(data: AuditionTapeConfir
     const textContent = createAuditionTapeConfirmationEmailText(data);
 
     const messageData = {
-      from: `CinemaPlot Auditions <${fromEmail}>`,
+      from: fromEmail,
       to: data.email,
       subject: `Audition Tape Received - ${data.eventTitle}`,
       text: textContent,
@@ -809,7 +814,12 @@ export async function sendAuditionTapeNotificationEmail(data: AuditionTapeNotifi
     
     const client = getMailgunClient();
     const domain = process.env.MAILGUN_DOMAIN!;
-    const fromEmail = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    const fromEmailConfig = process.env.MAILGUN_FROM_EMAIL || `noreply@${domain}`;
+    
+    // Extract just the email address if it's in the format "Name <email@domain.com>"
+    const emailMatch = fromEmailConfig.match(/<([^>]+)>/);
+    const emailAddress = emailMatch ? emailMatch[1] : fromEmailConfig;
+    const fromEmail = `CinemaPlot Auditions <${emailAddress}>`;
     
     // Create the notification email HTML content
     const htmlContent = createAuditionTapeNotificationEmailHTML(data);
@@ -818,7 +828,7 @@ export async function sendAuditionTapeNotificationEmail(data: AuditionTapeNotifi
     const textContent = createAuditionTapeNotificationEmailText(data);
 
     const messageData = {
-      from: `CinemaPlot Auditions <${fromEmail}>`,
+      from: fromEmail,
       to: data.email,
       subject: `New Audition Tape Submitted - ${data.eventTitle}`,
       text: textContent,
