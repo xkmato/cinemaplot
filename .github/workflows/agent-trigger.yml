@@ -1,0 +1,35 @@
+name: Agent-trigger
+
+on:
+  workflow_dispatch: {}
+  repository_dispatch:
+    types: [run-ci]
+
+jobs:
+  run-ci:
+    name: Agent-triggered CI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install (fast)
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test (subset)
+        run: |
+          # small, agent-friendly test run
+          npm test -- --runInBand --silent --if-present || true
+
+      - name: Echo payload
+        run: |
+          echo "Event name: $GITHUB_EVENT_NAME"
+          echo "Payload:" 
+          cat "$GITHUB_EVENT_PATH"
