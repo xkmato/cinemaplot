@@ -50,3 +50,5 @@ scripts/
 
 
 test-results/
+
+playwright-report/
