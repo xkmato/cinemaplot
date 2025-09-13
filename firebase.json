@@ -9,11 +9,8 @@
     "source": ".",
     "ignore": [
       "firebase.json",
-      "vercel.json",
       "**/.*",
-      "**/node_modules/**",
-      "**/scripts/**",
-      "**/tests/**"
+      "**/node_modules/**"
     ],
     "frameworksBackend": {
       "region": "us-central1"
