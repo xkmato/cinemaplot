@@ -15,7 +15,7 @@ import { useMemo, useState } from "react";
 export default function EventsPageClient() {
     const { events, isLoading } = useAppContext();
     const [searchTerm, setSearchTerm] = useState("");
-    const [sortBy, setSortBy] = useState("date");
+    const [sortBy, setSortBy] = useState("date-desc");
     const [filterBy, setFilterBy] = useState("all");
     const [categoryFilter, setCategoryFilter] = useState("all");
 
