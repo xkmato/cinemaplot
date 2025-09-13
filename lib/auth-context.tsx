@@ -256,9 +256,14 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             endDate: endDate.toISOString().slice(0, 10), // Store as YYYY-MM-DD
         };
 
+        // Filter out undefined values before sending to Firestore
+        const cleanEventData = Object.fromEntries(
+            Object.entries(completeEventData).filter(([, value]) => value !== undefined)
+        );
+
         await addDoc(
             collection(db, `artifacts/${appId}/public/data/events`),
-            completeEventData
+            cleanEventData
         );
 
         // Success

@@ -90,7 +90,7 @@ export default function CreateEventPage() {
                 isMultiDay: isMultiDay && numberOfDays > 1,
                 numberOfDays: isMultiDay ? numberOfDays : 1,
                 isMoviePremiere,
-                trailerUrl: isMoviePremiere ? trailerUrl : undefined,
+                trailerUrl: isMoviePremiere && trailerUrl.trim() ? trailerUrl : undefined,
                 tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
             }, imageFile);
 
