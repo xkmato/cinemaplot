@@ -8,7 +8,7 @@ This file lists all project tasks. Add new tasks as numbered items below. Each t
 ## Task 1 — Make header links available on mobile (mobile menu)
 
 ID: 001
-Status: Open
+Status: Completed
 Assignee: Unassigned
 
 Context: the header navigation lives in the app UI under `#app` (see `components/shared-header.tsx`). On small screens the header links are not currently available — we need a responsive menu.
@@ -48,7 +48,42 @@ Estimated effort: 3-6 hours (dev + tests).
 
 Done checklist (mark when complete):
 
-- [ ] Inspect header and confirm where links are defined
+- [x] Inspect header and confirm where links are defined
+- [x] Implement mobile menu component and styles
+- [x] Add accessibility behavior (aria, keyboard)
+- [x] Add tests (unit/integration)
+- [x] Update docs and QA on devices
+
+### Implementation Details
+
+**Changes Made:**
+
+- Added hamburger menu button (visible only on mobile with `md:hidden` class)
+- Implemented slide-out mobile menu overlay with backdrop
+- Added keyboard accessibility (Escape to close, proper ARIA attributes)
+- Added click-outside-to-close functionality
+- Prevented body scroll when menu is open
+- Included all navigation links in mobile menu (Discover, Events, Movies, Preproduction, Create)
+- Added user authentication actions in mobile menu
+- Used existing design tokens and Tailwind classes for consistent styling
+
+**Accessibility Features:**
+
+- ARIA labels and roles for screen readers
+- Keyboard navigation support (Escape key)
+- Focus management (prevents background interaction)
+- Semantic HTML structure
+
+**Testing:**
+
+- Added comprehensive Playwright test in `playwright-tests/basic-navigation.spec.ts`
+- Tests cover menu open/close, link visibility, keyboard accessibility
+- Mobile viewport simulation for accurate testing
+
+**Files Modified:**
+
+- `components/shared-header.tsx` - Added mobile menu functionality
+- `playwright-tests/basic-navigation.spec.ts` - Added mobile menu tests
 - [ ] Implement mobile menu component and styles
 - [ ] Add accessibility behavior (aria, keyboard)
 - [ ] Add tests (unit/integration)

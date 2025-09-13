@@ -36,6 +36,55 @@ test.describe('Home Page', () => {
       expect(viewport?.width).toBeLessThan(768);
     }
   });
+
+  test('should have functional mobile menu', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/');
+    
+    // Check that desktop nav is hidden on mobile
+    const desktopNav = page.locator('nav.hidden.md\\:flex');
+    await expect(desktopNav).toBeHidden();
+    
+    // Check that mobile menu button is visible
+    const mobileMenuButton = page.locator('button[aria-label*="menu" i]');
+    await expect(mobileMenuButton).toBeVisible();
+    
+    // Open mobile menu
+    await mobileMenuButton.click();
+    
+    // Check that mobile menu overlay appears
+    const mobileMenu = page.locator('[role="dialog"][aria-label*="Mobile navigation"]');
+    await expect(mobileMenu).toBeVisible();
+    
+    // Check that navigation links are present in mobile menu
+    const mobileNavLinks = mobileMenu.locator('a');
+    await expect(mobileNavLinks).toHaveCount(5); // discover, events, movies, screenplays, create
+    
+    // Check specific links
+    await expect(mobileMenu.locator('a[href="/discover"]')).toBeVisible();
+    await expect(mobileMenu.locator('a[href="/events"]')).toBeVisible();
+    await expect(mobileMenu.locator('a[href="/movies"]')).toBeVisible();
+    await expect(mobileMenu.locator('a[href="/screenplays"]')).toBeVisible();
+    await expect(mobileMenu.locator('a[href="/create"]')).toBeVisible();
+    
+    // Test closing menu with close button
+    const closeButton = mobileMenu.locator('button[aria-label="Close menu"]');
+    await closeButton.click();
+    await expect(mobileMenu).toBeHidden();
+    
+    // Test opening and closing with hamburger button
+    await mobileMenuButton.click();
+    await expect(mobileMenu).toBeVisible();
+    await mobileMenuButton.click();
+    await expect(mobileMenu).toBeHidden();
+    
+    // Test keyboard accessibility - open menu and press Escape
+    await mobileMenuButton.click();
+    await expect(mobileMenu).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(mobileMenu).toBeHidden();
+  });
 });
 
 test.describe('Authentication Flow', () => {
