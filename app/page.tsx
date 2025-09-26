@@ -92,11 +92,11 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 hidden md:block">
             Create, Share & Discover
             <span className="block text-primary">Amazing Events, Films & Preproduction Projects</span>
           </h1>
-          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto hidden md:block">
             Build a community around your events, movies, and preproduction projects. Start with your script,
             connect with audiences, get collaborators, and manage your project from concept to screen.
           </p>
